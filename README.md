@@ -186,7 +186,8 @@ object Parcours {
 		rampUsers (5) during (5.minutes)
 	)).protocols(httpProtocol)
 
-Step 8 monitoring
+Monitoring
+===========
 gatling.conf
 writers = [console, file, graphite]
 graphite {

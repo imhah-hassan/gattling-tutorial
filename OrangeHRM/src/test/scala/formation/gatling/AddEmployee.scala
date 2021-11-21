@@ -8,6 +8,7 @@ import io.gatling.jdbc.Predef._
 import scala.util.Random
 
 class AddEmployee extends Simulation {
+
 	val base_url = "http://192.168.1.208:90"
 	val admin_pwd = "Hassan$2022"
 
@@ -26,7 +27,7 @@ class AddEmployee extends Simulation {
 
 	val httpProtocol = http
 		.baseUrl(base_url)
-		//.proxy(Proxy("localhost", 8888))
+		// .proxy(Proxy("localhost", 8888))
 		.inferHtmlResources(BlackList(""".*\.js""", """.*\.css""", """.*\.gif""", """.*\.jpeg""", """.*\.jpg""", """.*\.ico""", """.*\.woff""", """.*\.woff2""", """.*\.(t|o)tf""", """.*\.png""", """.*detectportal\.firefox\.com.*"""), WhiteList())
 		.acceptHeader("text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
 		.acceptEncodingHeader("gzip, deflate")
@@ -131,6 +132,7 @@ class AddEmployee extends Simulation {
 					.formParam("personal[DOB]", "${date_de_naissance}")
 					.formParam("personal[txtEmpNickName]", "")
 					.formParam("personal[txtMilitarySer]", "")
+					.check(status.is(200))
 					.resources(http("getWorkWeekAjax")
 						.get("/index.php/leave/getWorkWeekAjax?_=1634564107742"),
 						//.headers(headers_5),
@@ -160,7 +162,7 @@ class AddEmployee extends Simulation {
 				.exec(http("viewEmployeeList")
 					.post("/index.php/pim/viewEmployeeList")
 					//.headers(headers_1)
-					.formParam("empsearch[employee_name][empName]", "${nom}")
+					.formParam("empsearch[employee_name][empName]", "")
 					.formParam("empsearch[employee_name][empId]", "${empId}")
 					.formParam("empsearch[id]", "")
 					.formParam("empsearch[employee_status]", "0")
@@ -172,6 +174,7 @@ class AddEmployee extends Simulation {
 					.formParam("empsearch[_csrf_token]", "${empsearch_csrf_token}")
 					.formParam("pageNo", "")
 					.formParam("hdnAction", "search")
+					.check(status.is(200))
 					.resources(http("getEmployeeListAjax")
 						.get("/index.php/pim/getEmployeeListAjax")
 						//.headers(headers_5)
@@ -182,12 +185,18 @@ class AddEmployee extends Simulation {
 		}
 		def delete = {
 			 // DELETE EMPLOYEE
-				 exec(http("deleteEmployees")
+			exec(session => {
+				println("defaultList_csrf_token = " + session("defaultList_csrf_token").as[String])
+				println("empId = " + session("empId").as[String])
+				session
+			})
+				 .exec(http("deleteEmployees")
 						.post("/index.php/pim/deleteEmployees")
 						//.headers(headers_1)
 						.formParam("defaultList[_csrf_token]", "${defaultList_csrf_token}")
 						.formParam("chkSelectAll", "")
 						.formParam("chkSelectRow[]", "${empId}")
+					 	.check(status.is(200))
 						.resources(http("getEmployeeListAjax")
 						.get("/index.php/pim/getEmployeeListAjax")
 						//.headers(headers_5)
@@ -203,13 +212,41 @@ class AddEmployee extends Simulation {
 		}
 	}
 
-	val scn = scenario("AddEmployee")
+	object Parcours {
+		def loginLogout = {
+			exec (Employee.login)
+				.exec (Employee.logout)
+		}
+		def addEmployee = {
+			exec (Employee.login)
+				.exec (Employee.add)
+				.exec (Employee.logout)
+		}
+		def searchEmployee = {
+			exec (Employee.login)
+				.exec (Employee.search)
+				.exec (Employee.logout)
+		}
+		def deleteEmployee = {
+			exec (Employee.login)
+				.exec (Employee.delete)
+				.exec (Employee.logout)
+		}
+
+	}
+	val scn = scenario("OrangerHRM employee")
 		// HOME
 		.feed(employees)
-		.exec (Employee.login)
-		.exec (Employee.add)
-		.exec (Employee.search)
-		.exec (Employee.logout)
+		.during (5.minutes) {
+			randomSwitch(
+				10d->(Parcours.loginLogout),
+				20d->(Parcours.addEmployee),
+				60d->(Parcours.searchEmployee),
+				10d->(Parcours.deleteEmployee)
+			)
+		}
 
-	setUp(scn.inject(atOnceUsers(1))).protocols(httpProtocol)
+	setUp(scn.inject(
+		rampUsers (1) during (1.seconds)
+	)).protocols(httpProtocol)
 }
