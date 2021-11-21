@@ -8,9 +8,11 @@ import io.gatling.jdbc.Predef._
 import scala.util.Random
 
 class AddEmployee extends Simulation {
+	//val base_url = "https://opensource-demo.orangehrmlive.com"
+	//val admin_pwd = "admin123"
 
-	val base_url = "https://opensource-demo.orangehrmlive.com/"
-	val admin_pwd = "admin123"
+	val base_url = "http://192.168.1.208:90"
+	val admin_pwd = "Hassan$2022"
 	object Utils {
 		def randomCode( ) : String = {
 			val rnd = new Random()
