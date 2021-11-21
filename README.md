@@ -109,3 +109,89 @@ Debug Fiddler
 
 Delete
 .check(css("#defaultList__csrf_token", "value").saveAs("defaultList__csrf_token"))
+
+ThinkTime et reorg
+===================
+
+// Think time entre 1 et 3 s
+		def thinktime( ) : FiniteDuration = {
+			val rnd = new Random()
+			return (rnd.nextInt(100) + 300).milliseconds
+		}
+
+Remplacer 
+.pause(0)
+.pause(Utils.thinktime())
+
+Réorganisation
+	object Employee {
+		def login = {
+		}
+	}
+
+		.exec (Employee.login)
+def search (name:String)
+
+
+feeder
+=======
+
+employees.csv 
+
+nom;prenom;matricule;date_de_naissance
+Petitjean;Christelle;45471;1983-03-13
+Leduc;Sabine;64166;1998-07-07
+Roger;Olivie;54324;1997-03-01
+Charles;Susan;99939;1974-02-25
+Joly;Aurore;44632;1962-10-23
+
+
+feed(employees)
+.exec(session => {
+     println("**** Employee  : ****" + session("nom").as[String] + " " + session("prenom").as[String] + " / " + session("matricule").as[String]) 
+	 session
+})
+
+
+
+from faker import Faker
+from faker import Factory
+fakerFR = Factory.create('fr_FR')
+faker_en = Faker()
+print("nom;prenom;matricule;date_de_naissance")
+for i in range(20000):
+    nom = fakerFR.last_name()
+    prenom = fakerFR.first_name()
+    matricule = str(fakerFR.random_number(5))
+    date_de_naissance = str(fakerFR.date_of_birth(tzinfo=None, minimum_age=22, maximum_age=60))
+    print( ";".join((nom, prenom, matricule, date_de_naissance)))
+
+parcours et modèle
+====================
+object Parcours {
+      def LoginLogout = {
+         exec (Employee.Login)
+      }
+
+	val scn = scenario("OrangerHRM employee")
+		.during (2.minutes) {
+			pace (10.seconds)
+			randomSwitch(
+				40d->(Parcours.LoginLogout),
+				60d->(Parcours.AddEmployee),
+			)
+		}
+
+	setUp(scn.inject(
+		rampUsers (5) during (5.minutes)
+	)).protocols(httpProtocol)
+
+Step 8 monitoring
+gatling.conf
+writers = [console, file, graphite]
+graphite {
+      host = "localhost"             # InfluxDB or Carbon server
+      port = 2003                       # The port to which the Carbon server listens to (2003 is default for plaintext, 2004 is default for pickle)
+    }
+
+
