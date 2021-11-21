@@ -8,6 +8,9 @@ import scala.util.Random
 
 class AddEmployee extends Simulation {
 
+	// val base_url = "https://opensource-demo.orangehrmlive.com"
+	// val admin_pwd = "admin123"
+
 	val base_url = "http://192.168.1.208:90"
 	val admin_pwd = "Hassan$2022"
 
@@ -153,24 +156,33 @@ class AddEmployee extends Simulation {
 		def search = {
 			// SEARCH EMPLOYEE
 			group("Rechercher Salarié") {
-				exec(http("viewEmployeeList")
-					.get("/index.php/pim/viewEmployeeList/reset/1")
+				exec(session => session.set("row", Utils.randomRow()))
+					.exec(http("viewEmployeeList")
+						.get("/index.php/pim/viewEmployeeList/reset/1")
+						.check(status.is(200))
+					)
+				.exec(http("viewEmployeeList")
+					.get("/index.php/pim/viewEmployeeList?sortField=lastName&sortOrder=DESC")
 					.check(status.is(200))
 					.check(css("#empsearch__csrf_token", "value").saveAs("empsearch_csrf_token"))
-					.check(css("#resultTable>tbody>tr:nth-of-type(1)>td:nth-of-type(1)>input[type='checkbox']", "value").saveAs("empId"))
-					.check(css("#resultTable>tbody>tr:nth-of-type(1)>td:nth-of-type(2)>a").saveAs("empNumber"))
-
+					.check(css("#resultTable>tbody>tr:nth-of-type(${row})>td:nth-of-type(1)>input[type='checkbox']", "value").saveAs("empId"))
+					.check(css("#resultTable>tbody>tr:nth-of-type(${row})>td:nth-of-type(2)>a").saveAs("empNumber"))
+					.check(css("#resultTable>tbody>tr:nth-of-type(${row})>td:nth-of-type(4)>a").saveAs("empLastName"))
 					//.headers(headers_4)
 					.resources(http("getEmployeeListAjax")
 						.get("/index.php/pim/getEmployeeListAjax")
 						//.headers(headers_5)
 					))
 					.pause(Utils.thinktime())
+					.exec(session => {
+						println("Search Employee : " + session("empLastName").as[String])
+						session
+					})
 					.exec(http("viewEmployeeList")
 						.post("/index.php/pim/viewEmployeeList")
 						//.headers(headers_1)
-						.formParam("empsearch[employee_name][empName]", "")
-						.formParam("empsearch[employee_name][empId]", "${empNumber}")
+						.formParam("empsearch[employee_name][empName]", "${empLastName}")
+						.formParam("empsearch[employee_name][empId]", "")
 						.formParam("empsearch[id]", "")
 						.formParam("empsearch[employee_status]", "0")
 						.formParam("empsearch[termination]", "1")
@@ -181,6 +193,7 @@ class AddEmployee extends Simulation {
 						.formParam("empsearch[_csrf_token]", "${empsearch_csrf_token}")
 						.formParam("pageNo", "")
 						.formParam("hdnAction", "search")
+						.check(status.is(200))
 						.resources(http("getEmployeeListAjax")
 							.get("/index.php/pim/getEmployeeListAjax")
 							//.headers(headers_5)
@@ -194,13 +207,21 @@ class AddEmployee extends Simulation {
 			// Supprimer un des 10 premiers de la liste
 			group("Supprimer Salarié") {
 				exec(session => session.set("row", Utils.randomRow()))
+					.exec(http("viewEmployeeList")
+						.get("/index.php/pim/viewEmployeeList/reset/1")
+						.check(status.is(200))
+					)
 				.exec(http("viewEmployeeList")
-					.get("/index.php/pim/viewEmployeeList/reset/1")
+					.get("/index.php/pim/viewEmployeeList?sortField=lastName&sortOrder=DESC")
 					.check(status.is(200))
 					.check(css("#defaultList__csrf_token", "value").saveAs("defaultList_csrf_token"))
 					.check(css("#resultTable>tbody>tr:nth-of-type(${row})>td:nth-of-type(1)>input[type='checkbox']", "value").saveAs("empId"))
 				)
-					.exec(http("deleteEmployees")
+					.exec(session => {
+						println("Delete Employee : " + session("empId").as[String])
+						session
+					})
+			.exec(http("deleteEmployees")
 						.post("/index.php/pim/deleteEmployees")
 						//.headers(headers_1)
 						.formParam("defaultList[_csrf_token]", "${defaultList_csrf_token}")
@@ -256,10 +277,10 @@ class AddEmployee extends Simulation {
 		.during (5 minutes) {
 			randomSwitch(
 				10d->(Parcours.home),
-				20d->(Parcours.loginLogout),
-				10d->(Parcours.addEmployee),
-				50d->(Parcours.searchEmployee),
-				10d->(Parcours.deleteEmployee)
+				30d->(Parcours.loginLogout),
+				15d->(Parcours.addEmployee),
+				40d->(Parcours.searchEmployee),
+				5d->(Parcours.deleteEmployee)
 			)
 		}
 
