@@ -1,7 +1,7 @@
 -----------------------------26091326749537329901312335116
 Content-Disposition: form-data; name="firstName"
 
-Performance${code}
+${prenom}
 -----------------------------26091326749537329901312335116
 Content-Disposition: form-data; name="middleName"
 
@@ -9,11 +9,11 @@ Content-Disposition: form-data; name="middleName"
 -----------------------------26091326749537329901312335116
 Content-Disposition: form-data; name="lastName"
 
-Gatling${code}
+${nom}
 -----------------------------26091326749537329901312335116
 Content-Disposition: form-data; name="employeeId"
 
-${code}
+${matricule}
 -----------------------------26091326749537329901312335116
 Content-Disposition: form-data; name="photofile"; filename=""
 Content-Type: application/octet-stream
