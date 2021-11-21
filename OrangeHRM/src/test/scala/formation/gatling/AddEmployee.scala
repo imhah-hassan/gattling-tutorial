@@ -9,6 +9,9 @@ import scala.util.Random
 
 class AddEmployee extends Simulation {
 
+	// val base_url = "https://opensource-demo.orangehrmlive.com"
+	// val admin_pwd = "admin123"
+
 	val base_url = "http://192.168.1.208:90"
 	val admin_pwd = "Hassan$2022"
 	
@@ -182,17 +185,17 @@ class AddEmployee extends Simulation {
 		.pause(Utils.thinktime())
 
 		// DELETE EMPLOYEE
-//		.exec(http("deleteEmployees")
-//			.post("/index.php/pim/deleteEmployees")
-//			//.headers(headers_1)
-//			.formParam("defaultList[_csrf_token]", "${defaultList_csrf_token}")
-//			.formParam("chkSelectAll", "")
-//			.formParam("chkSelectRow[]", "${empId}")
-//			.resources(http("getEmployeeListAjax")
-//			.get("/index.php/pim/getEmployeeListAjax")
-//			//.headers(headers_5)
-//			))
-//		.pause(Utils.thinktime())
+		.exec(http("deleteEmployees")
+			.post("/index.php/pim/deleteEmployees")
+			//.headers(headers_1)
+			.formParam("defaultList[_csrf_token]", "${defaultList_csrf_token}")
+			.formParam("chkSelectAll", "")
+			.formParam("chkSelectRow[]", "${empId}")
+			.resources(http("getEmployeeListAjax")
+			.get("/index.php/pim/getEmployeeListAjax")
+			//.headers(headers_5)
+			))
+		.pause(Utils.thinktime())
 		
 		// LOGOUT
 		.exec(http("logout")
