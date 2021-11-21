@@ -8,8 +8,10 @@ import io.gatling.jdbc.Predef._
 
 class AddEmployee extends Simulation {
 
+	val baseUrl = "https://opensource-demo.orangehrmlive.com"
+	val admin_pwd = "admin123"
 	val httpProtocol = http
-		.baseUrl("https://opensource-demo.orangehrmlive.com")
+		.baseUrl(baseUrl)
 		.inferHtmlResources(BlackList(""".*\.js""", """.*\.css""", """.*\.gif""", """.*\.jpeg""", """.*\.jpg""", """.*\.ico""", """.*\.woff""", """.*\.woff2""", """.*\.(t|o)tf""", """.*\.png""", """.*detectportal\.firefox\.com.*"""), WhiteList())
 		.acceptHeader("text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
 		.acceptEncodingHeader("gzip, deflate")
@@ -84,7 +86,7 @@ class AddEmployee extends Simulation {
 			.formParam("installation", "")
 			.formParam("_csrf_token", "${csrf_token}")
 			.formParam("txtUsername", "Admin")
-			.formParam("txtPassword", "admin123")
+			.formParam("txtPassword", admin_pwd)
 			.formParam("Submit", "LOGIN")
 			.check(status.is(200))
 			.resources(http("employeeDistribution")
