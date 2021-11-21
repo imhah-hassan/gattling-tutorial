@@ -56,3 +56,56 @@ logback-test.xml
 gatling.conf
 runDescription = "Webinaire Gatling"
 
+Add employee Random EmployeeID
+========================================
+
+
+import scala.util.Random
+object Utils {
+// Génération d’un matricule sur 5 chiffres
+    def randomCode( ) : String = {
+      val rnd = new Random()
+      return (10000 + rnd.nextInt(88888)).toString()
+    }
+}
+exec (session => session.set("employeeRandomNumber", Utils.randomCode()))
+
+
+.check(status.is(200))
+.check(css("#csrf_token", "value").saveAs("csrf_token"))
+.check(css("#empNumber", "value").saveAs("empNumber"))
+
+ElFileBody
+
+.check(css("#personal__csrf_token", "value").saveAs("personal_csrf_token"))
+.check(css("#personal_txtEmpID", "value").saveAs("personal_txtEmpID"))
+
+
+Search employee
+==========================
+.check(status.is(200))
+.check(css("#empsearch__csrf_token", "value").saveAs("empsearch_csrf_token"))
+
+Démo Chropath
+table#resultTable>tbody>tr:nth-of-type(1)>td:nth-of-type(1)>input
+
+.check(status.is(200))
+.check(css("table#resultTable>tbody>tr:nth-of-type(1)>td:nth-of-type(1)>input", "value").saveAs("id"))
+
+
+
+.check(css("#contact__csrf_token", "value").saveAs("contact__csrf_token"))
+
+${employeeRandomNumber}
+
+Debug 
+.exec(session => {
+     println("**** personal_txtEmpID : ****" + session("personal_txtEmpID").as[String]) session
+})
+
+Debug Fiddler
+.proxy(Proxy("localhost", 8888))
+
+
+Delete
+.check(css("#defaultList__csrf_token", "value").saveAs("defaultList__csrf_token"))

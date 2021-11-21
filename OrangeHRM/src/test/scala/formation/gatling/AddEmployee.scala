@@ -5,11 +5,23 @@ import scala.concurrent.duration._
 import io.gatling.core.Predef._
 import io.gatling.http.Predef._
 import io.gatling.jdbc.Predef._
+import scala.util.Random
 
 class AddEmployee extends Simulation {
 
-	val httpProtocol = http
-		.baseUrl("https://opensource-demo.orangehrmlive.com")
+	val base_url = "https://opensource-demo.orangehrmlive.com/"
+	val admin_pwd = "admin123"
+	object Utils {
+		def randomCode( ) : String = {
+			val rnd = new Random()
+			return (10000 + rnd.nextInt(88888)).toString()
+		}
+	}
+
+
+		val httpProtocol = http
+		.baseUrl( base_url )
+		// .proxy(Proxy("localhost", 8888))
 		.inferHtmlResources(BlackList(""".*\.js""", """.*\.css""", """.*\.gif""", """.*\.jpeg""", """.*\.jpg""", """.*\.ico""", """.*\.woff""", """.*\.woff2""", """.*\.(t|o)tf""", """.*\.png""", """.*detectportal\.firefox\.com.*"""), WhiteList())
 		.acceptHeader("text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
 		.acceptEncodingHeader("gzip, deflate")
@@ -25,7 +37,7 @@ class AddEmployee extends Simulation {
 		"Upgrade-Insecure-Requests" -> "1")
 
 	val headers_1 = Map(
-		"Origin" -> "https://opensource-demo.orangehrmlive.com",
+		"Origin" ->  base_url ,
 		"Sec-Fetch-Dest" -> "document",
 		"Sec-Fetch-Mode" -> "navigate",
 		"Sec-Fetch-Site" -> "same-origin",
@@ -55,7 +67,7 @@ class AddEmployee extends Simulation {
 
 	val headers_7 = Map(
 		"Content-Type" -> "multipart/form-data; boundary=---------------------------26091326749537329901312335116",
-		"Origin" -> "https://opensource-demo.orangehrmlive.com",
+		"Origin" ->  base_url ,
 		"Sec-Fetch-Dest" -> "document",
 		"Sec-Fetch-Mode" -> "navigate",
 		"Sec-Fetch-Site" -> "same-origin",
@@ -84,7 +96,7 @@ class AddEmployee extends Simulation {
 			.formParam("installation", "")
 			.formParam("_csrf_token", "${csrf_token}")
 			.formParam("txtUsername", "Admin")
-			.formParam("txtPassword", "admin123")
+			.formParam("txtPassword", admin_pwd)
 			.formParam("Submit", "LOGIN")
 			.check(status.is(200))
 			.resources(http("employeeDistribution")
@@ -100,98 +112,123 @@ class AddEmployee extends Simulation {
 		))
 		.pause(0)
 
-//		// ADD EMPLOYEE
-//		.exec(http("request_4")
-//			.get("/index.php/pim/viewPimModule")
-//			.headers(headers_4)
-//			.resources(http("request_5")
-//			.get("/index.php/pim/getEmployeeListAjax")
-//			.headers(headers_5),
-//            http("request_6")
-//			.get("/index.php/pim/addEmployee")
-//			.headers(headers_4)))
-//		.pause(19)
-//		.exec(http("request_7")
-//			.post("/index.php/pim/addEmployee")
-//			.headers(headers_7)
-//			.body(RawFileBody("formation/gatling/addemployee/0007_request.dat"))
-//			.resources(http("request_8")
-//			.get("/index.php/leave/getHolidayAjax?year=2021&_=1634564077374")
-//			.headers(headers_5),
-//            http("request_9")
-//			.get("/index.php/leave/getWorkWeekAjax?_=1634564077375")
-//			.headers(headers_5)))
-//		.pause(29)
-//
-//		// EMPLOYEE DATAILS
-//		.exec(http("request_10")
-//			.post("/index.php/pim/viewPersonalDetails")
-//			.headers(headers_1)
-//			.formParam("personal[_csrf_token]", "b46564e8cd646e7256be3f5d504624c3")
-//			.formParam("personal[txtEmpID]", "48")
-//			.formParam("personal[txtEmpFirstName]", "Performance")
-//			.formParam("personal[txtEmpMiddleName]", "")
-//			.formParam("personal[txtEmpLastName]", "Gatling")
-//			.formParam("personal[txtEmployeeId]", "9009")
-//			.formParam("personal[txtOtherID]", "")
-//			.formParam("personal[txtLicenNo]", "")
-//			.formParam("personal[txtLicExpDate]", "yyyy-mm-dd")
-//			.formParam("personal[txtNICNo]", "")
-//			.formParam("personal[txtSINNo]", "")
-//			.formParam("personal[optGender]", "1")
-//			.formParam("personal[cmbMarital]", "Married")
-//			.formParam("personal[cmbNation]", "64")
-//			.formParam("personal[DOB]", "1989-11-25")
-//			.formParam("personal[txtEmpNickName]", "")
-//			.formParam("personal[txtMilitarySer]", "")
-//			.resources(http("request_11")
-//			.get("/index.php/leave/getWorkWeekAjax?_=1634564107742")
-//			.headers(headers_5),
-//            http("request_12")
-//			.get("/index.php/leave/getHolidayAjax?year=2021&_=1634564107741")
-//			.headers(headers_5)))
-//		.pause(11)
-//
-//
-//		// SEARCH EMPLOYEE
-//		.exec(http("request_13")
-//			.get("/index.php/pim/viewEmployeeList/reset/1")
-//			.headers(headers_4)
-//			.resources(http("request_14")
-//			.get("/index.php/pim/getEmployeeListAjax")
-//			.headers(headers_5)))
-//		.pause(8)
-//		.exec(http("request_15")
-//			.post("/index.php/pim/viewEmployeeList")
-//			.headers(headers_1)
-//			.formParam("empsearch[employee_name][empName]", "Gatling")
-//			.formParam("empsearch[employee_name][empId]", "48")
-//			.formParam("empsearch[id]", "")
-//			.formParam("empsearch[employee_status]", "0")
-//			.formParam("empsearch[termination]", "1")
-//			.formParam("empsearch[supervisor_name]", "")
-//			.formParam("empsearch[job_title]", "0")
-//			.formParam("empsearch[sub_unit]", "0")
-//			.formParam("empsearch[isSubmitted]", "yes")
-//			.formParam("empsearch[_csrf_token]", "25ccbbe42911b4d5962a3d6ec6567d43")
-//			.formParam("pageNo", "")
-//			.formParam("hdnAction", "search")
-//			.resources(http("request_16")
-//			.get("/index.php/pim/getEmployeeListAjax")
-//			.headers(headers_5)))
-//		.pause(12)
-//
-//		// DELETE EMPLOYEE
-//		.exec(http("request_17")
-//			.post("/index.php/pim/deleteEmployees")
-//			.headers(headers_1)
-//			.formParam("defaultList[_csrf_token]", "edd286c7e549a3e4c9654cbece8e15c8")
-//			.formParam("chkSelectAll", "")
-//			.formParam("chkSelectRow[]", "48")
-//			.resources(http("request_18")
-//			.get("/index.php/pim/getEmployeeListAjax")
-//			.headers(headers_5)))
-//		.pause(8)
+		// ADD EMPLOYEE
+		.exec (session => session.set("code", Utils.randomCode()))
+		.exec(http("viewPimModule")
+			.get("/index.php/pim/viewPimModule")
+			.check(status.is(200))
+			// .headers(headers_4)
+			.resources(http("getEmployeeListAjax")
+			.get("/index.php/pim/getEmployeeListAjax"),
+			//.headers(headers_5),
+            http("addEmployeeGet")
+			.get("/index.php/pim/addEmployee")
+			.check(status.is(200))
+			.check(css("#csrf_token", "value").saveAs("csrf_token"))
+			.check(css("#empNumber", "value").saveAs("empNumber"))
+
+				//.headers(headers_4)
+			))
+		.pause(0)
+		.exec(http("addEmployeePost")
+			.post("/index.php/pim/addEmployee")
+			.headers(headers_7)
+			.body(ElFileBody("formation/gatling/addemployee/0007_request.dat"))
+			.check(status.is(200))
+			.check(css("#personal__csrf_token", "value").saveAs("personal_csrf_token"))
+			.check(css("#personal_txtEmpID", "value").saveAs("personal_txtEmpID"))
+
+			.resources(http("getHolidayAjax")
+			.get("/index.php/leave/getHolidayAjax?year=2021&_=1634564077374"),
+			//.headers(headers_5),
+            http("getWorkWeekAjax")
+			.get("/index.php/leave/getWorkWeekAjax?_=1634564077375")
+			//.headers(headers_5)
+			))
+		.pause(0)
+
+		// EMPLOYEE DATAILS
+		.exec(http("viewPersonalDetails")
+			.post("/index.php/pim/viewPersonalDetails")
+			//.headers(headers_1)
+			.formParam("personal[_csrf_token]", "${personal_csrf_token}")
+			.formParam("personal[txtEmpID]", "${personal_txtEmpID}")
+			.formParam("personal[txtEmpFirstName]", "Performance${code}")
+			.formParam("personal[txtEmpMiddleName]", "")
+			.formParam("personal[txtEmpLastName]", "Gatling${code}")
+			.formParam("personal[txtEmployeeId]", "${code}")
+			.formParam("personal[txtOtherID]", "")
+			.formParam("personal[txtLicenNo]", "")
+			.formParam("personal[txtLicExpDate]", "yyyy-mm-dd")
+			.formParam("personal[txtNICNo]", "")
+			.formParam("personal[txtSINNo]", "")
+			.formParam("personal[optGender]", "1")
+			.formParam("personal[cmbMarital]", "Married")
+			.formParam("personal[cmbNation]", "64")
+			.formParam("personal[DOB]", "1989-11-25")
+			.formParam("personal[txtEmpNickName]", "")
+			.formParam("personal[txtMilitarySer]", "")
+			.check(status.is(200))
+			.resources(http("getWorkWeekAjax")
+			.get("/index.php/leave/getWorkWeekAjax?_=1634564107742"),
+			//.headers(headers_5),
+            http("getHolidayAjax")
+			.get("/index.php/leave/getHolidayAjax?year=2021&_=1634564107741")
+			//.headers(headers_5)
+			))
+		.pause(0)
+
+
+		// SEARCH EMPLOYEE
+		.exec(http("viewEmployeeList")
+			.get("/index.php/pim/viewEmployeeList/reset/1")
+			.check(status.is(200))
+			.check(css("#defaultList__csrf_token", "value").saveAs("defaultList_csrf_token"))
+			.check(css("#empsearch__csrf_token", "value").saveAs("empsearch_csrf_token"))
+			.check(css("#resultTable>tbody>tr:nth-of-type(1)>td:nth-of-type(1)>input[type='checkbox']", "value").saveAs("empId"))
+			.check(css("#resultTable>tbody>tr:nth-of-type(1)>td:nth-of-type(2)>a").saveAs("empNumber"))
+
+			//.headers(headers_4)
+			.resources(http("getEmployeeListAjax")
+			.get("/index.php/pim/getEmployeeListAjax")
+			//.headers(headers_5)
+			))
+		.pause(8)
+		.exec(http("viewEmployeeList")
+			.post("/index.php/pim/viewEmployeeList")
+			//.headers(headers_1)
+			.formParam("empsearch[employee_name][empName]", "Gatling")
+			.formParam("empsearch[employee_name][empId]", "${empId}")
+			.formParam("empsearch[id]", "")
+			.formParam("empsearch[employee_status]", "0")
+			.formParam("empsearch[termination]", "1")
+			.formParam("empsearch[supervisor_name]", "")
+			.formParam("empsearch[job_title]", "0")
+			.formParam("empsearch[sub_unit]", "0")
+			.formParam("empsearch[isSubmitted]", "yes")
+			.formParam("empsearch[_csrf_token]", "${empsearch_csrf_token}")
+			.formParam("pageNo", "")
+			.formParam("hdnAction", "search")
+			.check(status.is(200))
+			.resources(http("getEmployeeListAjax")
+			.get("/index.php/pim/getEmployeeListAjax")
+			//.headers(headers_5)
+			))
+		.pause(0)
+
+		// DELETE EMPLOYEE
+		.exec(http("deleteEmployees")
+			.post("/index.php/pim/deleteEmployees")
+			//.headers(headers_1)
+			.formParam("defaultList[_csrf_token]", "${defaultList_csrf_token}")
+			.formParam("chkSelectAll", "")
+			.formParam("chkSelectRow[]", "${empId}")
+			.check(status.is(200))
+			.resources(http("getEmployeeListAjax")
+			.get("/index.php/pim/getEmployeeListAjax")
+			//.headers(headers_5)
+			))
+		.pause(0)
 		
 		// LOGOUT
 		.exec(http("logout")
