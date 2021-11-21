@@ -9,6 +9,9 @@ import scala.util.Random
 
 class AddEmployee extends Simulation {
 
+	// val base_url = "https://opensource-demo.orangehrmlive.com"
+	// val admin_pwd = "admin123"
+
 	val base_url = "http://192.168.1.208:90"
 	val admin_pwd = "Hassan$2022"
 
@@ -38,14 +41,7 @@ class AddEmployee extends Simulation {
 
 	object Employee {
 		def login = {
-			exec(session => {
-				println("Nom = " + session("nom").as[String])
-				println("Prenom = " + session("prenom").as[String])
-				println("Matricule = " + session("matricule").as[String])
-				println("Date de naissance = " + session("date_de_naissance").as[String])
-				session
-			})
-				.exec(http("login")
+				exec(http("login")
 					.get("/index.php/auth/login")
 					.check(status.is(200))
 					.check( css("#csrf_token","value").saveAs("csrf_token"))
@@ -79,7 +75,15 @@ class AddEmployee extends Simulation {
 		}
 		def add = {
 			// ADD EMPLOYEE
-			exec(http("viewPimModule")
+			feed(employees)
+			.exec(session => {
+				println("Nom = " + session("nom").as[String])
+				println("Prenom = " + session("prenom").as[String])
+				println("Matricule = " + session("matricule").as[String])
+				println("Date de naissance = " + session("date_de_naissance").as[String])
+				session
+			})
+				.exec(http("viewPimModule")
 				.get("/index.php/pim/viewPimModule")
 				// .headers(headers_4)
 				.resources(http("getEmployeeListAjax")
@@ -146,24 +150,28 @@ class AddEmployee extends Simulation {
 		def search = {
 			// SEARCH EMPLOYEE
 			exec(http("viewEmployeeList")
-				.get("/index.php/pim/viewEmployeeList/reset/1")
+				.get("/index.php/pim/viewEmployeeList?sortField=employeeId&sortOrder=DESC")
 				.check(status.is(200))
 				.check(css("#defaultList__csrf_token", "value").saveAs("defaultList_csrf_token"))
 				.check(css("#empsearch__csrf_token", "value").saveAs("empsearch_csrf_token"))
 				.check(css("#resultTable>tbody>tr:nth-of-type(1)>td:nth-of-type(1)>input[type='checkbox']", "value").saveAs("empId"))
 				.check(css("#resultTable>tbody>tr:nth-of-type(1)>td:nth-of-type(2)>a").saveAs("empNumber"))
-
+				.check(css("#resultTable>tbody>tr:nth-of-type(1)>td:nth-of-type(4)>a").saveAs("empLastName"))
 				//.headers(headers_4)
 				.resources(http("getEmployeeListAjax")
 					.get("/index.php/pim/getEmployeeListAjax")
 					//.headers(headers_5)
 				))
 				.pause(Utils.thinktime())
+				.exec(session => {
+					println("Search employee  = " + session("empLastName").as[String])
+					session
+				})
 				.exec(http("viewEmployeeList")
 					.post("/index.php/pim/viewEmployeeList")
 					//.headers(headers_1)
-					.formParam("empsearch[employee_name][empName]", "")
-					.formParam("empsearch[employee_name][empId]", "${empId}")
+					.formParam("empsearch[employee_name][empName]", "${empLastName}")
+					.formParam("empsearch[employee_name][empId]", "")
 					.formParam("empsearch[id]", "")
 					.formParam("empsearch[employee_status]", "0")
 					.formParam("empsearch[termination]", "1")
@@ -229,6 +237,7 @@ class AddEmployee extends Simulation {
 		}
 		def deleteEmployee = {
 			exec (Employee.login)
+				.exec (Employee.search)
 				.exec (Employee.delete)
 				.exec (Employee.logout)
 		}
@@ -236,17 +245,16 @@ class AddEmployee extends Simulation {
 	}
 	val scn = scenario("OrangerHRM employee")
 		// HOME
-		.feed(employees)
-		.during (5.minutes) {
+		.during (1.minutes) {
 			randomSwitch(
-				10d->(Parcours.loginLogout),
+				40d->(Parcours.loginLogout),
 				20d->(Parcours.addEmployee),
-				60d->(Parcours.searchEmployee),
+				30d->(Parcours.searchEmployee),
 				10d->(Parcours.deleteEmployee)
 			)
 		}
 
 	setUp(scn.inject(
-		rampUsers (1) during (1.seconds)
+		rampUsers (5) during (10.seconds)
 	)).protocols(httpProtocol)
 }
