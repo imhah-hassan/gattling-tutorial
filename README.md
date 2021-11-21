@@ -195,4 +195,48 @@ graphite {
       port = 2003                       # The port to which the Carbon server listens to (2003 is default for plaintext, 2004 is default for pickle)
     }
 
+/etc/influxdb/influxdb.conf
+
+[meta]
+  dir = "/var/lib/influxdb/meta"
+
+[data]
+  dir = "/var/lib/influxdb/data"
+  wal-dir = "/var/lib/influxdb/wal"
+ 
+[http]
+  enabled = true
+  bind-address = ":8086"
+  log-enabled = true
+  
+[logging]
+  level = "info"
+
+[[graphite]]
+  enabled = true
+  database = "gatlingdb"
+  bind-address = ":2003"
+  protocol = "tcp"
+  consistency-level = "one"
+  name-separator = "."
+  templates = [
+	"gatling.*.users.*.*      measurement.simulation.measurement.request.field",
+	"gatling.*.*.*.*.*.*.*.*.*.*   measurement.simulation.group1.group2.group3.group4.group5.group6.request.status.field   group=6",
+	"gatling.*.*.*.*.*.*.*.*.*   measurement.simulation.group1.group2.group3.group4.group5.request.status.field   group=5",
+	"gatling.*.*.*.*.*.*.*.*   measurement.simulation.group1.group2.group3.group4.request.status.field   group=4",
+	"gatling.*.*.*.*.*.*.*   measurement.simulation.group1.group2.group3.request.status.field   group=3",
+	"gatling.*.*.*.*.*.*   measurement.simulation.group1.group2.request.status.field   group=2",
+	"gatling.*.*.*.*.*   measurement.simulation.group1.request.status.field   group=1",
+	"gatling.*.*.*.*   measurement.simulation.request.status.field   group=0",
+
+	"v2.gatling.*.*.*.users.*.*      .measurement.run.host.simulation.measurement.request.field",
+	"v2.gatling.*.*.*.*.*.*.*.*.*.*.*.*   .measurement.run.host.simulation.group1.group2.group3.group4.group5.group6.request.status.field   group=6",
+	"v2.gatling.*.*.*.*.*.*.*.*.*.*.*   .measurement.run.host.simulation.group1.group2.group3.group4.group5.request.status.field   group=5",
+	"v2.gatling.*.*.*.*.*.*.*.*.*.*   .measurement.run.host.simulation.group1.group2.group3.group4.request.status.field   group=4",
+	"v2.gatling.*.*.*.*.*.*.*.*.*   .measurement.run.host.simulation.group1.group2.group3.request.status.field   group=3",
+	"v2.gatling.*.*.*.*.*.*.*.*   .measurement.run.host.simulation.group1.group2.request.status.field   group=2",
+	"v2.gatling.*.*.*.*.*.*.*   .measurement.run.host.simulation.group1.request.status.field   group=1",
+	"v2.gatling.*.*.*.*.*.*   .measurement.run.host.simulation.request.status.field   group=0",
+  ]
+
 
