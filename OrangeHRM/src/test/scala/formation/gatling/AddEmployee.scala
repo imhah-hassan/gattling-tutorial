@@ -7,19 +7,31 @@ import scala.language.postfixOps
 import scala.util.Random
 
 class AddEmployee extends Simulation {
-
 	val base_url = "http://192.168.1.208:90"
 	val admin_pwd = "Hassan$2022"
+
+	val PACING = getProperty("PACING", "2000").toInt
+	val MIN_THK = getProperty("MIN_THK", "300").toInt
+	val MAX_THK = getProperty("MAX_THK", "1000").toInt
+	def usersCount:Int = getProperty("USERS", "5").toInt
+	def rampDuration:Int = getProperty("RAMP_DURATION", "1").toInt
+	def testDuration:Int = getProperty("DURATION", "5").toInt
+
+
+	def getProperty (propertyName: String, defaultValue:String) ={
+		Option (System.getenv(propertyName))
+			.orElse(Option(System.getProperty(propertyName)))
+			.getOrElse(defaultValue)
+	}
 
 	object Utils {
 		def randomCode( ) : String = {
 			val rnd = new Random()
 			return (10000 + rnd.nextInt(88888)).toString()
 		}
-		// Think time entre 1 et 3 s
 		def thinktime( ) : FiniteDuration = {
 			val rnd = new Random()
-			return (rnd.nextInt(1000) + 4000).milliseconds
+			return (rnd.nextInt(MAX_THK-MIN_THK) + MIN_THK).milliseconds
 		}
 		def randomRow( ) : Int = {
 			val rnd = new Random()
@@ -38,6 +50,7 @@ class AddEmployee extends Simulation {
 		.userAgentHeader("Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:93.0) Gecko/20100101 Firefox/93.0")
 
 	val employees = separatedValues("employees.csv", ';').eager.random
+	val search_employee = separatedValues("search.csv", ';').eager.random
 
 	object Employee {
 		def home = {
@@ -53,7 +66,8 @@ class AddEmployee extends Simulation {
 		def login = {
 			group("Connexion") {
 				// LOGIN
-				exec(http("validateCredentials")
+				exec (this.home)
+				.exec(http("validateCredentials")
 					.post("/index.php/auth/validateCredentials")
 					//.headers(headers_1)
 					.formParam("actionID", "")
@@ -251,19 +265,40 @@ class AddEmployee extends Simulation {
 		}
 	}
 
+	before {
+		println(s"Running users with ${usersCount} users")
+		println(s"Ramping over ${rampDuration} minutes")
+		println(s"Total test duration ${testDuration} minutes")
+
+		println(s"User iteration pacing ${PACING} seconds")
+		println(s"Request min think time  ${MIN_THK} milliseconds")
+		println(s"Request max think time ${MAX_THK} milliseconds")
+	}
+	after{
+		println( "Load test complete !")
+	}
+
+
 	val scn = scenario("OrangerHRM employee")
 		// HOME
-		.during (5 minutes) {
+		.during (testDuration.minutes) {
+			pace (PACING seconds)
 			randomSwitch(
 				10d->(Parcours.home),
 				20d->(Parcours.loginLogout),
-				10d->(Parcours.addEmployee),
-				50d->(Parcours.searchEmployee),
+				20d->(Parcours.addEmployee),
+				40d->(Parcours.searchEmployee),
 				10d->(Parcours.deleteEmployee)
 			)
 		}
 
 	setUp(scn.inject(
-		rampUsers (5) during (2 minutes)
+		rampUsers (usersCount) during (rampDuration.minutes)
 	)).protocols(httpProtocol)
+
+//	val scn_debug = scenario("AddEmployee")
+//		.exec (Parcours.addEmployee)
+//
+//	setUp(scn_debug.inject(atOnceUsers(1))).protocols(httpProtocol)
+
 }
