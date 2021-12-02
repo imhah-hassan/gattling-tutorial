@@ -1,3 +1,5 @@
+// A enrichir à partir de C:\Formation.old\Gatling\gatling_demo\src\test\resources
+
 package formation.gatling
 
 import scala.concurrent.duration._
@@ -5,17 +7,29 @@ import io.gatling.core.Predef._
 import io.gatling.http.Predef._
 import scala.language.postfixOps
 import scala.util.Random
+import com.typesafe.config.ConfigFactory
+import io.gatling.jdbc.Predef._
 
 class AddEmployee extends Simulation {
-	val base_url = "http://192.168.1.208:90"
-	val admin_pwd = "Hassan$2022"
+	val conf = ConfigFactory.load()
+	val server = conf.getString("server")
+	val base_url = "http://" + server +":90"
+	val admin_pwd = conf.getString("admin_pwd")
+	val mysql_pwd = conf.getString("mysql_pwd")
+	//
+	// Ajouter le connecteur Mysql JDBC (mysql-connector-java-8.0.27.jar) dans les librairies du projet
+	// Click droit Projet --> Open Module Settings --> Librairies --> Add
+	//
+	val existing_employees = jdbcFeeder("jdbc:mysql://"+server+":3306/orangehrm_db?useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC", "root", mysql_pwd,
+			"SELECT emp_number as empId, employee_id as matricule, emp_lastname as nom , emp_firstname as first_name FROM hs_hr_employee WHERE emp_number != 1 order by emp_number;").random
 
-	val PACING = getProperty("PACING", "2000").toInt
-	val MIN_THK = getProperty("MIN_THK", "300").toInt
-	val MAX_THK = getProperty("MAX_THK", "1000").toInt
-	def usersCount:Int = getProperty("USERS", "5").toInt
-	def rampDuration:Int = getProperty("RAMP_DURATION", "1").toInt
-	def testDuration:Int = getProperty("DURATION", "5").toInt
+
+	val PACING:Int = getProperty("PACING", "10").toInt										// seconds
+	val MIN_THK:Int = getProperty("MIN_THK", "1000").toInt								// miliseconds
+	val MAX_THK:Int = getProperty("MAX_THK", "3000").toInt								// miliseconds
+	val USERS_COUNT:Int = getProperty("USERS", "10").toInt
+	val RAMP_DURATION:Int = getProperty("RAMP_DURATION", "2").toInt				// minutes
+	val TEST_DURATION:Int = getProperty("DURATION", "5").toInt						// minutes
 
 
 	def getProperty (propertyName: String, defaultValue:String) ={
@@ -37,20 +51,29 @@ class AddEmployee extends Simulation {
 			val rnd = new Random()
 			return (rnd.nextInt(10) + 2)
 		}
+		def randomInt(max:Int ) : Int = {
+			val rnd = new Random()
+			return (rnd.nextInt(max-1) + 1)
+		}
+		def randomString(length: Int): String = {
+			val rnd = new Random()
+			rnd.alphanumeric.filter(_.isDigit).take(length).mkString
+		}
 	}
 
+	val boundary = Utils.randomString(28)
 
 	val httpProtocol = http
 		.baseUrl(base_url)
 		//.proxy(Proxy("localhost", 8888))
 		.inferHtmlResources(BlackList(""".*\.js""", """.*\.css""", """.*\.gif""", """.*\.jpeg""", """.*\.jpg""", """.*\.ico""", """.*\.woff""", """.*\.woff2""", """.*\.(t|o)tf""", """.*\.png""", """.*detectportal\.firefox\.com.*"""), WhiteList())
 		.acceptHeader("text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
+		.silentResources	// Supprime les ressources statiques du rapport
 		.acceptEncodingHeader("gzip, deflate")
 		.acceptLanguageHeader("en-US,fr;q=0.8,fr-FR;q=0.5,en;q=0.3")
 		.userAgentHeader("Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:93.0) Gecko/20100101 Firefox/93.0")
 
 	val employees = separatedValues("employees.csv", ';').eager.random
-	val search_employee = separatedValues("search.csv", ';').eager.random
 
 	object Employee {
 		def home = {
@@ -66,7 +89,8 @@ class AddEmployee extends Simulation {
 		def login = {
 			group("Connexion") {
 				// LOGIN
-				exec (this.home)
+				exec (session => session.set ("loggedIn", false))
+				.exec (this.home)
 				.exec(http("validateCredentials")
 					.post("/index.php/auth/validateCredentials")
 					//.headers(headers_1)
@@ -78,161 +102,262 @@ class AddEmployee extends Simulation {
 					.formParam("txtPassword", admin_pwd)
 					.formParam("Submit", "LOGIN")
 					.check(status.is(200))
+					.check(regex("Welcome Hassan").exists)
+					.check(css("#welcome").optional.saveAs("welcome"))
 					.resources(http("employeeDistribution")
 						.get("/index.php/dashboard/employeeDistribution")
-						.check(status.is(200))
-						,
+						.check(status.is(200)),
 						//.headers(headers_2),
 						http("pendingLeaveRequests")
 							.get("/index.php/dashboard/pendingLeaveRequests")
 							.check(status.is(200))
-
-						//	.headers(headers_2)
 					))
-				.pause(Utils.thinktime())
+					.doIf("${welcome.exists()}") {
+						exec (session => session.set ("loggedIn", true))
+					}
+					.pause(Utils.thinktime())
 			}
+		}
+		def setLanguage = {
+				// Set language
+				exec(http("localization")
+					.get("/index.php/admin/localization")
+					.check(status.is(200))
+					.check( css("#localization__csrf_token","value").saveAs("localization_csrf_token"))
+					//	.headers(headers_0)
+				)
+				.pause(Utils.thinktime())
+					.exec(http("changeLocalization")
+						.post("/index.php/admin/localization")
+						.formParam("localization[_csrf_token]", "${localization_csrf_token}")
+						.formParam("localization[dafault_language]", "en_US") //fr   en_US
+						.formParam("localization[default_date_format]", "Y-m-d")
+						.check(status.is(200))
+					)
+					.pause(Utils.thinktime())
 		}
 		def add = {
 			// ADD EMPLOYEE
-			group("Ajout salarié") {
-			feed(employees)
-			.exec(session => {
-				println("Emmployee : " + session("nom").as[String] + " , " + session("prenom").as[String]  + " , " +  session("matricule").as[String])
-				session
-			})
-			.exec(http("viewPimModule")
-					.get("/index.php/pim/viewPimModule")
-					// .headers(headers_4)
-					.resources(http("getEmployeeListAjax")
-						.get("/index.php/pim/getEmployeeListAjax"),
-						//.headers(headers_5),
-						http("addEmployeeGet")
-							.get("/index.php/pim/addEmployee")
+			doIf(session => session("loggedIn").as[Boolean]) {
+				group("Ajout salarié") {
+					feed(employees)
+						.exec(session => {
+							println("Add Employee : " + session("nom").as[String] + " , " + session("prenom").as[String] + " , " + session("matricule").as[String])
+							session
+						})
+						.exec (session => session.set ("created", false))
+						.exec(http("viewPimModule")
+							.get("/index.php/pim/viewPimModule")
+							// .headers(headers_4)
+							.resources(http("getEmployeeListAjax")
+								.get("/index.php/pim/getEmployeeListAjax"),
+								//.headers(headers_5),
+								http("addEmployeeGet")
+									.get("/index.php/pim/addEmployee")
+									.check(status.is(200))
+									.check(css("#csrf_token", "value").saveAs("csrf_token"))
+									.check(css("#empNumber", "value").saveAs("empNumber"))
+							))
+						.pause(Utils.thinktime())
+						.exec(http("addEmployeePost")
+							.post("/index.php/pim/addEmployee")
+							.headers(Map("Content-Type" -> "multipart/form-data; boundary=---------------------------26091326749537329901312335116"))
+							.body(ElFileBody("formation/gatling/addemployee/0007_request.dat"))
 							.check(status.is(200))
-							.check(css("#csrf_token", "value").saveAs("csrf_token"))
-							.check(css("#empNumber", "value").saveAs("empNumber"))
-
-						//.headers(headers_4)
-					))
-					.pause(Utils.thinktime())
-					.exec(http("addEmployeePost")
-						.post("/index.php/pim/addEmployee")
-						.headers(Map("Content-Type" -> "multipart/form-data; boundary=---------------------------26091326749537329901312335116"))
-						.body(ElFileBody("formation/gatling/addemployee/0007_request.dat"))
-						.check(status.is(200))
-						.check(substring("Échec de Sauvegarde").notExists)
-						.check(css("#personal__csrf_token", "value").saveAs("personal_csrf_token"))
-						.check(css("#personal_txtEmpID", "value").saveAs("personal_txtEmpID"))
-						.resources(http("getHolidayAjax")
-							.get("/index.php/leave/getHolidayAjax?year=2021&_=1634564077374"),
-							//.headers(headers_5),
-							http("getWorkWeekAjax")
-								.get("/index.php/leave/getWorkWeekAjax?_=1634564077375")
-							//.headers(headers_5)
-						))
-					.pause(Utils.thinktime())
-
-					// EMPLOYEE DATAILS
-					.exec(http("viewPersonalDetails")
-						.post("/index.php/pim/viewPersonalDetails")
-						//.headers(headers_1)
-						.formParam("personal[_csrf_token]", "${personal_csrf_token}")
-						.formParam("personal[txtEmpID]", "${personal_txtEmpID}")
-						.formParam("personal[txtEmpFirstName]", "${prenom}")
-						.formParam("personal[txtEmpMiddleName]", "")
-						.formParam("personal[txtEmpLastName]", "${nom}")
-						.formParam("personal[txtEmployeeId]", "${matricule}")
-						.formParam("personal[txtOtherID]", "")
-						.formParam("personal[txtLicenNo]", "")
-						.formParam("personal[txtLicExpDate]", "yyyy-mm-dd")
-						.formParam("personal[txtNICNo]", "")
-						.formParam("personal[txtSINNo]", "")
-						.formParam("personal[optGender]", "1")
-						.formParam("personal[cmbMarital]", "Married")
-						.formParam("personal[cmbNation]", "64")
-						.formParam("personal[DOB]", "${date_de_naissance}")
-						.formParam("personal[txtEmpNickName]", "")
-						.formParam("personal[txtMilitarySer]", "")
-						.resources(http("getWorkWeekAjax")
-							.get("/index.php/leave/getWorkWeekAjax?_=1634564107742"),
-							//.headers(headers_5),
-							http("getHolidayAjax")
-								.get("/index.php/leave/getHolidayAjax?year=2021&_=1634564107741")
-							//.headers(headers_5)
-						))
-					.pause(Utils.thinktime())
+							.check(substring("Échec de Sauvegarde").notExists)
+							.check(css("#personal_txtEmpID", "value").saveAs("empId"))
+							.check(css("#personal__csrf_token", "value").saveAs("personal_csrf_token"))
+							.resources(http("getHolidayAjax")
+								.get("/index.php/leave/getHolidayAjax?year=2021&_=1634564077374"),
+								//.headers(headers_5),
+								http("getWorkWeekAjax")
+									.get("/index.php/leave/getWorkWeekAjax?_=1634564077375")
+								//.headers(headers_5)
+							))
+						.doIf("${empId.exists()}") {
+							exec (session => session.set ("created", true))
+						}
+						.pause(Utils.thinktime())
+						.doIf(session => session("created").as[Boolean]) {
+							// EMPLOYEE DATAILS
+							exec(http("viewPersonalDetails")
+								.post("/index.php/pim/viewPersonalDetails")
+								//.headers(headers_1)
+								.formParam("personal[_csrf_token]", "${personal_csrf_token}")
+								.formParam("personal[txtEmpID]", "${empId}")
+								.formParam("personal[txtEmpFirstName]", "${prenom}")
+								.formParam("personal[txtEmpMiddleName]", "")
+								.formParam("personal[txtEmpLastName]", "${nom}")
+								.formParam("personal[txtEmployeeId]", "${matricule}")
+								.formParam("personal[txtOtherID]", "")
+								.formParam("personal[txtLicenNo]", "")
+								.formParam("personal[txtLicExpDate]", "yyyy-mm-dd")
+								.formParam("personal[txtNICNo]", "")
+								.formParam("personal[txtSINNo]", "")
+								.formParam("personal[optGender]", "${genre}")
+								.formParam("personal[cmbMarital]", "Married")
+								.formParam("personal[cmbNation]", "64")
+								.formParam("personal[DOB]", "${date_de_naissance}")
+								.formParam("personal[txtEmpNickName]", "")
+								.formParam("personal[txtMilitarySer]", "")
+								.resources(http("getWorkWeekAjax")
+									.get("/index.php/leave/getWorkWeekAjax?_=1634564107742"),
+									//.headers(headers_5),
+									http("getHolidayAjax")
+										.get("/index.php/leave/getHolidayAjax?year=2021&_=1634564107741")
+									//.headers(headers_5)
+								))
+								.pause(Utils.thinktime())
+								// address
+								.exec(http("viewContactDetails")
+									.get("/index.php/pim/contactDetails/empNumber/${empId}")
+									.check(status.is(200))
+									.check(regex("<h1>Contact Details</h1>").exists)
+									.check(css("#contact__csrf_token", "value").saveAs("csrf_token")))
+								.exec(http("contactDetails")
+									.post("/index.php/pim/contactDetails")
+									.formParam("contact[_csrf_token]", "${csrf_token}")
+									.formParam("contact[empNumber]", "${empId}")
+									.formParam("contact[street1]", "${rue}")
+									.formParam("contact[street2]", "")
+									.formParam("contact[city]", "${ville}")
+									.formParam("contact[province]", "${ville}")
+									.formParam("contact[state]", "")
+									.formParam("contact[emp_zipcode]", "${cp}")
+									.formParam("contact[country]", "FR")
+									.formParam("contact[emp_hm_telephone]", "${telephone}")
+									.formParam("contact[emp_mobile]", "")
+									.formParam("contact[emp_work_telephone]", "")
+									.formParam("contact[emp_work_email]", "${email}")
+									.formParam("contact[emp_oth_email]", "")
+									.check(status.is(200))
+									.check(css("#contact_emp_work_email", "value").is("${email}"))
+								)
+								.pause(Utils.thinktime)
+						}
+				}
 			}
+		}
+		def getRandomEmployee = {
+			exec(session => session.set("row", Utils.randomRow()))
+				.exec(http("viewEmployeeList")
+				.get("/index.php/pim/viewEmployeeList/reset/1")
+				.check(status.is(200))
+				)
+				.exec(http("viewEmployeeList")
+					.get("/index.php/pim/viewEmployeeList?sortField=employeeId&sortOrder=DESC")
+					.check(status.is(200))
+					.check(css("#empsearch__csrf_token", "value").saveAs("empsearch_csrf_token"))
+					.check(css("#resultTable>tbody>tr:nth-of-type(${row})>td:nth-of-type(1)>input[type='checkbox']", "value").saveAs("empId"))
+					.check(css("#resultTable>tbody>tr:nth-of-type(${row})>td:nth-of-type(2)>a").saveAs("empNumber"))
+					.check(css("#resultTable>tbody>tr:nth-of-type(${row})>td:nth-of-type(4)>a").saveAs("nom"))
+					.check(css("#defaultList__csrf_token", "value").saveAs("defaultList_csrf_token"))
+
+				)
+				//.exec(session => {
+				//	println("Random Employee : " + session("nom").as[String] + " with id : " + session("empId").as[String])
+				//	session
+				//})
 
 		}
 		def search = {
 			// SEARCH EMPLOYEE
-			group("Rechercher Salarié") {
-				exec(http("viewEmployeeList")
-					.get("/index.php/pim/viewEmployeeList/reset/1")
-					.check(status.is(200))
-					.check(css("#empsearch__csrf_token", "value").saveAs("empsearch_csrf_token"))
-					.check(css("#resultTable>tbody>tr:nth-of-type(1)>td:nth-of-type(1)>input[type='checkbox']", "value").saveAs("empId"))
-					.check(css("#resultTable>tbody>tr:nth-of-type(1)>td:nth-of-type(2)>a").saveAs("empNumber"))
-
-					//.headers(headers_4)
-					.resources(http("getEmployeeListAjax")
-						.get("/index.php/pim/getEmployeeListAjax")
-						//.headers(headers_5)
-					))
-					.pause(Utils.thinktime())
-					.exec(http("viewEmployeeList")
-						.post("/index.php/pim/viewEmployeeList")
-						//.headers(headers_1)
-						.formParam("empsearch[employee_name][empName]", "")
-						.formParam("empsearch[employee_name][empId]", "${empNumber}")
-						.formParam("empsearch[id]", "")
-						.formParam("empsearch[employee_status]", "0")
-						.formParam("empsearch[termination]", "1")
-						.formParam("empsearch[supervisor_name]", "")
-						.formParam("empsearch[job_title]", "0")
-						.formParam("empsearch[sub_unit]", "0")
-						.formParam("empsearch[isSubmitted]", "yes")
-						.formParam("empsearch[_csrf_token]", "${empsearch_csrf_token}")
-						.formParam("pageNo", "")
-						.formParam("hdnAction", "search")
-						.resources(http("getEmployeeListAjax")
-							.get("/index.php/pim/getEmployeeListAjax")
-							//.headers(headers_5)
-						))
-					.pause(Utils.thinktime())
+			feed(existing_employees)
+				//.exec(session => {
+				//	println("Existing Employee from database : " + session("nom").as[String] + " with id : " + session("empId").as[String])
+				//	session
+				//})
+			.doIf(session => session("loggedIn").as[Boolean]) {
+				group("Rechercher Salarié") {
+					exec (this.getRandomEmployee)
+						.exec(session => {
+							println("Search employee : " + session("nom").as[String] )
+							session
+						})
+						.exec(http("viewEmployeeList")
+							.post("/index.php/pim/viewEmployeeList")
+							//.headers(headers_1)
+							.formParam("empsearch[employee_name][empName]", "${nom}")
+							.formParam("empsearch[employee_name][empId]", "")
+							.formParam("empsearch[id]", "")
+							.formParam("empsearch[employee_status]", "0")
+							.formParam("empsearch[termination]", "1")
+							.formParam("empsearch[supervisor_name]", "")
+							.formParam("empsearch[job_title]", "0")
+							.formParam("empsearch[sub_unit]", "0")
+							.formParam("empsearch[isSubmitted]", "yes")
+							.formParam("empsearch[_csrf_token]", "${empsearch_csrf_token}")
+							.formParam("pageNo", "")
+							.formParam("hdnAction", "search")
+							.check(status.is(200))
+							.resources(http("getEmployeeListAjax")
+								.get("/index.php/pim/getEmployeeListAjax")
+								//.headers(headers_5)
+							))
+						.pause(Utils.thinktime())
+				}
 			}
+		}
+		def updatePhoto = {
+			// photo
+			exec (this.getRandomEmployee)
+				.exec(session => {
+					println("Update photo : " + session("nom").as[String] + " with id : " + session("empId").as[String])
+					session
+				})
+			.exec(http("viewPhotograph")
+				.get("/index.php/pim/viewPhotograph/empNumber/${empId}")
+				.check(status.is(200))
+				.check(regex("<h1>Photograph</h1>").exists)
+				.check(css("#csrf_token", "value").saveAs("csrf_token"))
+			)
+				.pause(Utils.thinktime)
+				.exec(session => session.set("id", Utils.randomInt(15)))
+				.exec(http("updatePhotograph")
+					.post("/index.php/pim/viewPhotograph")
+					.header("Content-Type", "multipart/form-data; boundary=---26091326749537329901312335116")
+					.formParam("_csrf_token", "${csrf_token}")
+					.formParam("emp_number", "${empId}")
+					.bodyPart(RawFileBodyPart("photofile", "photos/${id}.jpg"))
+					.check(status.is(200))
+				)
+				.pause(Utils.thinktime)
 
 		}
 		def delete = {
 			 // DELETE EMPLOYEE
-			// Supprimer un des 10 premiers de la liste
-			group("Supprimer Salarié") {
-				exec(session => session.set("row", Utils.randomRow()))
-				.exec(http("viewEmployeeList")
-					.get("/index.php/pim/viewEmployeeList/reset/1")
-					.check(status.is(200))
-					.check(css("#defaultList__csrf_token", "value").saveAs("defaultList_csrf_token"))
-					.check(css("#resultTable>tbody>tr:nth-of-type(${row})>td:nth-of-type(1)>input[type='checkbox']", "value").saveAs("empId"))
-				)
-					.exec(http("deleteEmployees")
-						.post("/index.php/pim/deleteEmployees")
-						//.headers(headers_1)
-						.formParam("defaultList[_csrf_token]", "${defaultList_csrf_token}")
-						.formParam("chkSelectAll", "")
-						.formParam("chkSelectRow[]", "${empId}")
-						.resources(http("getEmployeeListAjax")
-							.get("/index.php/pim/getEmployeeListAjax")
-							//.headers(headers_5)
-						))
-					.pause(Utils.thinktime())
+			doIf(session => session("loggedIn").as[Boolean]) {
+				// Supprimer un des 10 premiers de la liste
+				group("Supprimer Salarié") {
+					exec (this.getRandomEmployee)
+						.exec(session => {
+							println("Delete employee : " + session("nom").as[String] + " with id : " + session("empId").as[String])
+							session
+						})
+						.exec(http("deleteEmployees")
+							.post("/index.php/pim/deleteEmployees")
+							//.headers(headers_1)
+							.formParam("defaultList[_csrf_token]", "${defaultList_csrf_token}")
+							.formParam("chkSelectAll", "")
+							.formParam("chkSelectRow[]", "${empId}")
+							.check(status.is(200))
+							.resources(http("getEmployeeListAjax")
+								.get("/index.php/pim/getEmployeeListAjax")
+								//.headers(headers_5)
+							))
+						.pause(Utils.thinktime())
+				}
 			}
 		}
 		def logout = {
 			// LOGOUT
-			exec(http("logout")
-				.get("/index.php/auth/logout")
-				.check(status.is(200))
-			)
+			doIf(session => session("loggedIn").as[Boolean]) {
+
+				exec(http("logout")
+					.get("/index.php/auth/logout")
+					.check(status.is(200))
+				)
+			}
 		}
 	}
 
@@ -257,6 +382,13 @@ class AddEmployee extends Simulation {
 				.exec (Employee.search)
 				.exec (Employee.logout)
 		}
+		def updatePhoto = {
+			exec (Employee.home)
+				.exec (Employee.login)
+				.exec (Employee.search)
+				.exec (Employee.updatePhoto)
+				.exec (Employee.logout)
+		}
 		def deleteEmployee = {
 			exec (Employee.home)
 				.exec (Employee.login)
@@ -266,9 +398,9 @@ class AddEmployee extends Simulation {
 	}
 
 	before {
-		println(s"Running users with ${usersCount} users")
-		println(s"Ramping over ${rampDuration} minutes")
-		println(s"Total test duration ${testDuration} minutes")
+		println(s"Running users with ${USERS_COUNT} users")
+		println(s"Ramping over ${RAMP_DURATION} minutes")
+		println(s"Total test duration ${TEST_DURATION} minutes")
 
 		println(s"User iteration pacing ${PACING} seconds")
 		println(s"Request min think time  ${MIN_THK} milliseconds")
@@ -281,24 +413,33 @@ class AddEmployee extends Simulation {
 
 	val scn = scenario("OrangerHRM employee")
 		// HOME
-		.during (testDuration.minutes) {
+		.during (TEST_DURATION.minutes) {
 			pace (PACING seconds)
 			randomSwitch(
-				10d->(Parcours.home),
-				20d->(Parcours.loginLogout),
-				20d->(Parcours.addEmployee),
-				40d->(Parcours.searchEmployee),
-				10d->(Parcours.deleteEmployee)
+//				10d->(Parcours.home),
+//				20d->(Parcours.loginLogout),
+				50d->(Parcours.addEmployee),
+//				40d->(Parcours.searchEmployee),
+				50d->(Parcours.updatePhoto),
+//			10d->(Parcours.deleteEmployee)
 			)
 		}
 
 	setUp(scn.inject(
-		rampUsers (usersCount) during (rampDuration.minutes)
+		rampUsers (USERS_COUNT) during (RAMP_DURATION.minutes)
 	)).protocols(httpProtocol)
 
-//	val scn_debug = scenario("AddEmployee")
-//		.exec (Parcours.addEmployee)
-//
+	val scn_debug = scenario("AddEmployee")
+		.exec (Employee.login)
+		.exec (Employee.setLanguage)
+		.repeat(20) {
+			//exec(Employee.add)
+			exec (Employee.updatePhoto)
+			//exec (Employee.search)
+			//.exec (Employee.delete)
+		}
+		.exec (Employee.logout)
+
 //	setUp(scn_debug.inject(atOnceUsers(1))).protocols(httpProtocol)
 
 }
