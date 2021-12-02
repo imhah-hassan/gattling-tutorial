@@ -315,10 +315,42 @@ class AddEmployee extends Simulation {
 				.exec(session => session.set("id", Utils.randomInt(15)))
 				.exec(http("updatePhotograph")
 					.post("/index.php/pim/viewPhotograph")
-					.header("Content-Type", "multipart/form-data; boundary=---26091326749537329901312335116")
 					.formParam("_csrf_token", "${csrf_token}")
 					.formParam("emp_number", "${empId}")
 					.bodyPart(RawFileBodyPart("photofile", "photos/${id}.jpg"))
+					.check(status.is(200))
+				)
+				.pause(Utils.thinktime)
+
+		}
+		def addJobDetails = {
+			// Add Job Details
+			exec(session => {
+					println("Add Job Details : " + session("nom").as[String] + " with id : " + session("empId").as[String])
+					session
+				})
+				.exec(http("viewPhotograph")
+					.get("/index.php/pim/viewJobDetails/empNumber/${empId}")
+					.check(status.is(200))
+					.check(regex("<h1>Job</h1>").exists)
+					.check(css("#job__csrf_token", "value").saveAs("job_csrf_token"))
+				)
+				.pause(Utils.thinktime)
+				.exec (session => session.set("boundary", Utils.randomString(28)))
+				.exec(http("updatePhotograph")
+					.post("/index.php/pim/viewJobDetails")
+					.header("Content-Type", "multipart/form-data; boundary=-----------------------------${boundary}--")
+					.bodyPart(StringBodyPart("job[_csrf_token]", "${job_csrf_token}")).asMultipartForm
+					.bodyPart(StringBodyPart("job[emp_number]", "${empId}")).asMultipartForm
+					.bodyPart(StringBodyPart("job[job_title]", "2")).asMultipartForm
+					.bodyPart(StringBodyPart("job[emp_status]", "2")).asMultipartForm
+					.bodyPart(StringBodyPart("job[eeo_category]", "10")).asMultipartForm
+					.bodyPart(StringBodyPart("job[joined_date]", "2021-12-01")).asMultipartForm
+					.bodyPart(StringBodyPart("job[sub_unit]", "2")).asMultipartForm
+					.bodyPart(StringBodyPart("job[location]", "2")).asMultipartForm
+					.bodyPart(StringBodyPart("job[contract_start_date]", "2021-12-01")).asMultipartForm
+					.bodyPart(StringBodyPart("job[contract_end_date]", "yyyy-mm-dd")).asMultipartForm
+					.bodyPart(StringBodyPart("job[contract_file]", "")).asMultipartForm
 					.check(status.is(200))
 				)
 				.pause(Utils.thinktime)
@@ -374,6 +406,7 @@ class AddEmployee extends Simulation {
 			exec (Employee.home)
 				.exec (Employee.login)
 				.exec (Employee.add)
+				.exec (Employee.addJobDetails)
 				.exec (Employee.logout)
 		}
 		def searchEmployee = {
@@ -425,21 +458,21 @@ class AddEmployee extends Simulation {
 			)
 		}
 
-	setUp(scn.inject(
-		rampUsers (USERS_COUNT) during (RAMP_DURATION.minutes)
-	)).protocols(httpProtocol)
+//	setUp(scn.inject(
+//		rampUsers (USERS_COUNT) during (RAMP_DURATION.minutes)
+//	)).protocols(httpProtocol)
 
 	val scn_debug = scenario("AddEmployee")
 		.exec (Employee.login)
 		.exec (Employee.setLanguage)
-		.repeat(20) {
-			//exec(Employee.add)
-			exec (Employee.updatePhoto)
+		.repeat(1) {
+			exec(Employee.add)
+			.exec (Employee.addJobDetails)
 			//exec (Employee.search)
 			//.exec (Employee.delete)
 		}
 		.exec (Employee.logout)
 
-//	setUp(scn_debug.inject(atOnceUsers(1))).protocols(httpProtocol)
+	setUp(scn_debug.inject(atOnceUsers(1))).protocols(httpProtocol)
 
 }
