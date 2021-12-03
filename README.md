@@ -1,8 +1,11 @@
 Helpfull training at : https://academy.gatling.io/
 
+Initialize project
+===================
 mvn archetype:generate -DarchetypeGroupId=io.gatling.highcharts -DarchetypeArtifactId=gatling-highcharts-maven-archetype -DgroupId=tutorial.gatling -DartifactId=OrangeHRM
 
 Run recorder
+============ 
 Record script on https://opensource-demo.orangehrmlive.com
 	1-Login
 	2-Add Employee
