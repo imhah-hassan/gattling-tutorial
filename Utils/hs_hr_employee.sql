@@ -1,0 +1,1 @@
+SELECT CONCAT (employee_id, ";", emp_lastname, ";", emp_firstname) as "employee_id;emp_lastname;emp_firstnam" FROM hs_hr_employee WHERE employee_id>1 ORDER BY employee_id

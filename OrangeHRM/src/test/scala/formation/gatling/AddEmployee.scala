@@ -30,6 +30,7 @@ class AddEmployee extends Simulation {
 	val USERS_COUNT:Int = getProperty("USERS", "10").toInt
 	val RAMP_DURATION:Int = getProperty("RAMP_DURATION", "2").toInt				// minutes
 	val TEST_DURATION:Int = getProperty("DURATION", "5").toInt						// minutes
+	val ITERATIONS:Int = getProperty("ITERATIONS", "1").toInt
 
 
 	def getProperty (propertyName: String, defaultValue:String) ={
@@ -510,9 +511,12 @@ class AddEmployee extends Simulation {
 	}
 
 	object Parcours {
-		def navigation = {
+		def navigate = {
 			exec (Employee.login)
-			  .exec (Employee.navigate)
+				.repeat(ITERATIONS) {
+					exec(Employee.navigate)
+					.pause(PACING.seconds)
+				}
 				.exec (Employee.logout)
 
 		}
@@ -524,27 +528,39 @@ class AddEmployee extends Simulation {
 		def addEmployee = {
 			exec (Employee.home)
 				.exec (Employee.login)
-				.exec (Employee.add)
-				.exec (Employee.addJobDetails)
+				.repeat(ITERATIONS) {
+					exec(Employee.add)
+						.exec(Employee.addJobDetails)
+						.pause(PACING.seconds)
+				}
 				.exec (Employee.logout)
 		}
 		def searchEmployee = {
 			exec (Employee.home)
 				.exec (Employee.login)
-				.exec (Employee.search)
+				.repeat(ITERATIONS) {
+					exec (Employee.search)
+						.pause(PACING.seconds)
+				}
 				.exec (Employee.logout)
 		}
 		def updatePhoto = {
 			exec (Employee.home)
 				.exec (Employee.login)
-				.exec (Employee.search)
-				.exec (Employee.updatePhoto)
+				.repeat(ITERATIONS) {
+					exec (Employee.search)
+					.exec (Employee.updatePhoto)
+						.pause(PACING.seconds)
+				}
 				.exec (Employee.logout)
 		}
 		def deleteEmployee = {
 			exec (Employee.home)
 				.exec (Employee.login)
-				.exec (Employee.delete)
+				.repeat(ITERATIONS) {
+					exec (Employee.delete)
+						.pause(PACING.seconds)
+				}
 				.exec (Employee.logout)
 		}
 	}
@@ -565,13 +581,13 @@ class AddEmployee extends Simulation {
 
 	val scn = scenario("OrangerHRM employee")
 		// HOME
-		.exec (Employee.login)
 		.during (TEST_DURATION.minutes) {
 			pace (PACING seconds)
 			randomSwitch(
-				100d->(Employee.navigate),
+				50d->(Parcours.navigate),
+				30d->(Parcours.addEmployee),
+				20d->(Parcours.updatePhoto),
 			)
-			.exec (Employee.logout)
 		}
 
 	setUp(scn.inject(

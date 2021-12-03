@@ -58,8 +58,6 @@ runDescription = "Webinaire Gatling"
 
 Add employee Random EmployeeID
 ========================================
-
-
 import scala.util.Random
 object Utils {
 // Génération d’un matricule sur 5 chiffres
@@ -112,7 +110,6 @@ Delete
 
 ThinkTime et reorg
 ===================
-
 // Think time entre 1 et 3 s
 		def thinktime( ) : FiniteDuration = {
 			val rnd = new Random()
@@ -135,9 +132,7 @@ def search (name:String)
 
 feeder
 =======
-
 employees.csv 
-
 nom;prenom;matricule;date_de_naissance
 Petitjean;Christelle;45471;1983-03-13
 Leduc;Sabine;64166;1998-07-07

@@ -1,0 +1,11 @@
+C:
+cd C:\Users\h.imhah\Desktop\webinaire\gatling-bundle
+REM PACING seconds / MIN_THK, MAX_THK milliseconds / RAMP_DURATION, DURATION minutes
+SET PACING=30
+SET MIN_THK=1000
+SET MAX_THK=3000
+SET USERS=100
+SET RAMP_DURATION=5
+SET DURATION=15
+SET ITERATIONS=1
+bin\gatling.bat
