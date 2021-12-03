@@ -6,13 +6,13 @@ mvn archetype:generate -DarchetypeGroupId=io.gatling.highcharts -DarchetypeArtif
 
 Run recorder
 ============ 
-Record script on https://opensource-demo.orangehrmlive.com
-	1-Login
-	2-Add Employee
-	3-Employee Details
-	4-Search Employee
-	5-Delete Employee
-	6-Logout
+Record script on https://opensource-demo.orangehrmlive.com   
+	1-Login   
+	2-Add Employee   
+	3-Employee Details   
+	4-Search Employee   
+	5-Delete Employee   
+	6-Logout   
 
 LoginLogout
 ============
