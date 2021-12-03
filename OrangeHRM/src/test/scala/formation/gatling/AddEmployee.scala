@@ -381,7 +381,6 @@ class AddEmployee extends Simulation {
 				}
 			}
 		}
-
 		def navigate = {
 			// NAVIGATE
 			exec(http("viewEmployeeList")
@@ -498,7 +497,6 @@ class AddEmployee extends Simulation {
 				.pause(Utils.thinktime())
 
 		}
-
 		def logout = {
 			// LOGOUT
 			doIf(session => session("loggedIn").as[Boolean]) {
@@ -512,8 +510,11 @@ class AddEmployee extends Simulation {
 	}
 
 	object Parcours {
-		def home = {
-			exec (Employee.home)
+		def navigation = {
+			exec (Employee.login)
+			  .exec (Employee.navigate)
+				.exec (Employee.logout)
+
 		}
 		def loginLogout = {
 			exec (Employee.home)
@@ -564,21 +565,18 @@ class AddEmployee extends Simulation {
 
 	val scn = scenario("OrangerHRM employee")
 		// HOME
+		.exec (Employee.login)
 		.during (TEST_DURATION.minutes) {
 			pace (PACING seconds)
 			randomSwitch(
-//				10d->(Parcours.home),
-//				20d->(Parcours.loginLogout),
-				50d->(Parcours.addEmployee),
-//				40d->(Parcours.searchEmployee),
-				50d->(Parcours.updatePhoto),
-//			10d->(Parcours.deleteEmployee)
+				100d->(Employee.navigate),
 			)
+			.exec (Employee.logout)
 		}
 
-//	setUp(scn.inject(
-//		rampUsers (USERS_COUNT) during (RAMP_DURATION.minutes)
-//	)).protocols(httpProtocol)
+	setUp(scn.inject(
+		rampUsers (USERS_COUNT) during (RAMP_DURATION.minutes)
+	)).protocols(httpProtocol)
 
 	val scn_debug = scenario("AddEmployee")
 		.exec (Employee.login)
@@ -592,6 +590,6 @@ class AddEmployee extends Simulation {
 		}
 		.exec (Employee.logout)
 
-	setUp(scn_debug.inject(atOnceUsers(1))).protocols(httpProtocol)
+//	setUp(scn_debug.inject(atOnceUsers(1))).protocols(httpProtocol)
 
 }
