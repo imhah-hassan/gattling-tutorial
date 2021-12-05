@@ -59,5 +59,5 @@ Create logback-test.xml
 ```
 Change gatling.conf  
 ```
-runDescription = "Webinaire Gatling"
+runDescription = "Gatling tutorial"
 ```
