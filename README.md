@@ -1,7 +1,7 @@
 # Training on Gatling Academy
 Helpfull training at : https://academy.gatling.io/
 
-#Initialize Gatling project with maven
+# Initialize Gatling project with maven
 mvn archetype:generate -DarchetypeGroupId=io.gatling.highcharts -DarchetypeArtifactId=gatling-highcharts-maven-archetype -DgroupId=tutorial.gatling -DartifactId=OrangeHRM
 
 # Record
