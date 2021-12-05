@@ -1,7 +1,10 @@
+#Training on Gatling Academy
 Helpfull training at : https://academy.gatling.io/
 
+#Initialize Gatling project with maven
 mvn archetype:generate -DarchetypeGroupId=io.gatling.highcharts -DarchetypeArtifactId=gatling-highcharts-maven-archetype -DgroupId=tutorial.gatling -DartifactId=OrangeHRM
 
+#Record
 Run recorder
 Record script on https://opensource-demo.orangehrmlive.com
 	1-Login
@@ -11,6 +14,7 @@ Record script on https://opensource-demo.orangehrmlive.com
 	5-Delete Employee
 	6-Logout
 
+#First Correlation
 LoginLogout
 ============
 Comment all request except Login and Logout
