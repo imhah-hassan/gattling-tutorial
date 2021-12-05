@@ -28,12 +28,12 @@ Use firefox F12 and search token
 .check( css("#csrf_token","value").saveAs("csrf_token"))
 ```
 
-Add .check(status.is(200)) to all requests
-Set all pause to 0
+Add .check(status.is(200)) to all requests  
+Set all pause to 0  
 
-Log and conf
-=====================
-logback-test.xml
+## Log and conf
+Create logback-test.xml
+```
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
@@ -56,7 +56,8 @@ logback-test.xml
         <appender-ref ref="CONSOLE" />
     </root>
 </configuration>
-
-gatling.conf
+```
+Change gatling.conf  
+```
 runDescription = "Webinaire Gatling"
-
+```
