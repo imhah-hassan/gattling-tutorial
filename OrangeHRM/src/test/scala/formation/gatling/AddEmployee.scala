@@ -1,5 +1,3 @@
-// A enrichir à partir de C:\Formation.old\Gatling\gatling_demo\src\test\resources
-
 package formation.gatling
 
 import scala.concurrent.duration._
@@ -23,7 +21,6 @@ class AddEmployee extends Simulation {
 	val existing_employees = jdbcFeeder("jdbc:mysql://"+server+":3306/orangehrm_db?useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC", "root", mysql_pwd,
 			"SELECT emp_number as empId, employee_id as matricule, emp_lastname as nom , emp_firstname as first_name FROM hs_hr_employee WHERE emp_number != 1 order by emp_number;").random
 
-
 	val PACING:Int = getProperty("PACING", "10").toInt										// seconds
 	val MIN_THK:Int = getProperty("MIN_THK", "1000").toInt								// miliseconds
 	val MAX_THK:Int = getProperty("MAX_THK", "3000").toInt								// miliseconds
@@ -38,7 +35,6 @@ class AddEmployee extends Simulation {
 			.orElse(Option(System.getProperty(propertyName)))
 			.getOrElse(defaultValue)
 	}
-
 	object Utils {
 		def randomCode( ) : String = {
 			val rnd = new Random()
@@ -263,12 +259,12 @@ class AddEmployee extends Simulation {
 		}
 		def search = {
 			// SEARCH EMPLOYEE
-			feed(existing_employees)
+			//feed(existing_employees)
 				//.exec(session => {
 				//	println("Existing Employee from database : " + session("nom").as[String] + " with id : " + session("empId").as[String])
 				//	session
 				//})
-			.doIf(session => session("loggedIn").as[Boolean]) {
+			doIf(session => session("loggedIn").as[Boolean]) {
 				group("Rechercher Salarié") {
 					exec (this.getRandomEmployee)
 						.exec(session => {
@@ -291,38 +287,64 @@ class AddEmployee extends Simulation {
 							.formParam("pageNo", "")
 							.formParam("hdnAction", "search")
 							.check(status.is(200))
+							.check(css("#resultTable>tbody>tr:nth-of-type(1)>td:nth-of-type(1)>input[type='checkbox']", "value").saveAs("empId"))
 							.resources(http("getEmployeeListAjax")
 								.get("/index.php/pim/getEmployeeListAjax")
 								//.headers(headers_5)
 							))
+						.exec(session => {
+							println("Found : " + session("empId").as[String] )
+							session
+						})
+						// Details
+						.exec(http("viewEmployee")
+							.get("/index.php/pim/viewEmployee/empNumber/${empId}")
+							.check(status.is(200))
+							.check(regex("<h1>Personal Details</h1>").exists)
+						)
+						// Job
+						.exec(http("viewContactDetails")
+							.get("/index.php/pim/contactDetails/empNumber/${empId}")
+							.check(status.is(200))
+							.check(regex("<h1>Contact Details</h1>").exists)
+						)
+						.exec(http("viewEmployee")
+							.get("/index.php/pim/viewJobDetails/empNumber/${empId}")
+							.check(status.is(200))
+							.check(regex("<h1>Job</h1>").exists)
+						)
+
 						.pause(Utils.thinktime())
 				}
 			}
 		}
 		def updatePhoto = {
 			// photo
-			exec (this.getRandomEmployee)
-				.exec(session => {
-					println("Update photo : " + session("nom").as[String] + " with id : " + session("empId").as[String])
-					session
-				})
-			.exec(http("viewPhotograph")
-				.get("/index.php/pim/viewPhotograph/empNumber/${empId}")
-				.check(status.is(200))
-				.check(regex("<h1>Photograph</h1>").exists)
-				.check(css("#csrf_token", "value").saveAs("csrf_token"))
-			)
-				.pause(Utils.thinktime)
-				.exec(session => session.set("id", Utils.randomInt(15)))
-				.exec(http("updatePhotograph")
-					.post("/index.php/pim/viewPhotograph")
-					.formParam("_csrf_token", "${csrf_token}")
-					.formParam("emp_number", "${empId}")
-					.bodyPart(RawFileBodyPart("photofile", "photos/${id}.jpg"))
-					.check(status.is(200))
-				)
-				.pause(Utils.thinktime)
-
+			doIf(session => session("loggedIn").as[Boolean]) {
+				group("MAJ Photo") {
+					exec(this.getRandomEmployee)
+						.exec(session => {
+							println("Update photo : " + session("nom").as[String] + " with id : " + session("empId").as[String])
+							session
+						})
+						.exec(http("viewPhotograph")
+							.get("/index.php/pim/viewPhotograph/empNumber/${empId}")
+							.check(status.is(200))
+							.check(regex("<h1>Photograph</h1>").exists)
+							.check(css("#csrf_token", "value").saveAs("csrf_token"))
+						)
+						.pause(Utils.thinktime)
+						.exec(session => session.set("id", Utils.randomInt(15)))
+						.exec(http("updatePhotograph")
+							.post("/index.php/pim/viewPhotograph")
+							.formParam("_csrf_token", "${csrf_token}")
+							.formParam("emp_number", "${empId}")
+							.bodyPart(RawFileBodyPart("photofile", "photos/${id}.jpg"))
+							.check(status.is(200))
+						)
+						.pause(Utils.thinktime)
+				}
+			}
 		}
 		def addJobDetails = {
 			// Add Job Details
@@ -384,119 +406,122 @@ class AddEmployee extends Simulation {
 		}
 		def navigate = {
 			// NAVIGATE
-			exec(http("viewEmployeeList")
-				.get("/index.php/pim/viewEmployeeList/reset/1")
-				.check(status.is(200))
-				.check(regex("Employee Information</h1>").exists)
-				.resources(http("getEmployeeListAjax")
-					.get("/index.php/pim/getEmployeeListAjax")
-					.check(status.is(200))
-				))
-				.pause(Utils.thinktime())
-				.exec(http("addEmployeePage")
-					.get("/index.php/pim/addEmployee")
-					.check(regex("Add Employee").exists)
-					.check(status.is(200))
-				)
-				.pause(Utils.thinktime())
-				.exec(http("viewDefinedPredefinedReports")
-					.get("/index.php/core/viewDefinedPredefinedReports/reportGroup/3/reportType/PIM_DEFINED")
-					.check(regex("Employee Reports").exists)
-					.check(status.is(200))
-				)
-				.pause(Utils.thinktime())
-				.exec(http("viewMyDetails")
-					.get("/index.php/pim/viewMyDetails")
-					.check(status.is(200))
-					.check(regex("Personal Details").exists)
-					.resources(http("getWorkWeekAjax")
-						.get("/index.php/leave/getWorkWeekAjax?_=1635768128976")
+			doIf(session => session("loggedIn").as[Boolean]) {
+				group("Navigation") {
+					exec(http("viewEmployeeList")
+						.get("/index.php/pim/viewEmployeeList/reset/1")
 						.check(status.is(200))
-						,
-						http("getHolidayAjax")
-							.get("/index.php/leave/getHolidayAjax?year=2021&_=1635768128975")
+						.check(regex("Employee Information</h1>").exists)
+						.resources(http("getEmployeeListAjax")
+							.get("/index.php/pim/getEmployeeListAjax")
 							.check(status.is(200))
-					))
-				.pause(Utils.thinktime())
-				.exec(http("dashboard")
-					.get("/index.php/dashboard")
-					.check(status.is(200))
-					.check(regex("Dashboard").exists)
-					.resources(http("pendingLeaveRequests")
-						.get("/index.php/dashboard/pendingLeaveRequests")
-						.check(status.is(200)),
-						http("employeeDistribution")
-							.get("/index.php/dashboard/employeeDistribution")
+						))
+						.pause(Utils.thinktime())
+						.exec(http("addEmployeePage")
+							.get("/index.php/pim/addEmployee")
+							.check(regex("Add Employee").exists)
 							.check(status.is(200))
-					))
-				.pause(Utils.thinktime())
-				.exec(http("viewOrganizationGeneralInformation")
-					.get("/index.php/admin/viewOrganizationGeneralInformation")
-					.check(status.is(200))
-					.check(regex("General Information").exists)
-				)
-				.pause(Utils.thinktime())
-				.exec(http("viewLocations")
-					.get("/index.php/admin/viewLocations")
-					.check(status.is(200))
-					.check(regex("Locations").exists)
-				)
-				.pause(Utils.thinktime())
-				.exec(http("viewCompanyStructure")
-					.get("/index.php/admin/viewCompanyStructure")
-					.check(status.is(200))
-					.check(regex("Organization Structure").exists)
-				)
-				.pause(Utils.thinktime())
-				.exec(http("localization")
-					.get("/index.php/admin/localization")
-					.check(status.is(200))
-					.check(regex("Localization").exists)
-				)
-				.pause(Utils.thinktime())
-				.exec(http("listMailConfiguration")
-					.get("/index.php/admin/listMailConfiguration")
-					.check(status.is(200))
-					.check(regex("Mail Configuration").exists)
-				)
-				.pause(Utils.thinktime())
-				.exec(http("viewSystemUsers")
-					.get("/index.php/admin/viewSystemUsers")
-					.check(status.is(200))
-					.check(regex("System Users").exists)
-				)
-				.pause(Utils.thinktime())
-				.exec(http("viewJobTitleList")
-					.get("/index.php/admin/viewJobTitleList")
-					.check(status.is(200))
-					.check(regex("Job Titles").exists)
-				)
-				.pause(Utils.thinktime())
-				.exec(http("viewPayGrades")
-					.get("/index.php/admin/viewPayGrades")
-					.check(status.is(200))
-					.check(regex("Pay Grades").exists)
-				)
-				.pause(Utils.thinktime())
-				.exec(http("employmentStatus")
-					.get("/index.php/admin/employmentStatus")
-					.check(status.is(200))
-					.check(regex("").exists)
-				)
-				.pause(Utils.thinktime())
-				.exec(http("jobCategory")
-					.get("/index.php/admin/jobCategory")
-					.check(status.is(200))
-					.check(regex("Employment Status").exists)
-				)
-				.pause(Utils.thinktime())
-				.exec(http("workShift")
-					.get("/index.php/admin/workShift")
-					.check(status.is(200))
-					.check(regex("Work Shifts").exists)
-				)
-				.pause(Utils.thinktime())
-
+						)
+						.pause(Utils.thinktime())
+						.exec(http("viewDefinedPredefinedReports")
+							.get("/index.php/core/viewDefinedPredefinedReports/reportGroup/3/reportType/PIM_DEFINED")
+							.check(regex("Employee Reports").exists)
+							.check(status.is(200))
+						)
+						.pause(Utils.thinktime())
+						.exec(http("viewMyDetails")
+							.get("/index.php/pim/viewMyDetails")
+							.check(status.is(200))
+							.check(regex("Personal Details").exists)
+							.resources(http("getWorkWeekAjax")
+								.get("/index.php/leave/getWorkWeekAjax?_=1635768128976")
+								.check(status.is(200))
+								,
+								http("getHolidayAjax")
+									.get("/index.php/leave/getHolidayAjax?year=2021&_=1635768128975")
+									.check(status.is(200))
+							))
+						.pause(Utils.thinktime())
+						.exec(http("dashboard")
+							.get("/index.php/dashboard")
+							.check(status.is(200))
+							.check(regex("Dashboard").exists)
+							.resources(http("pendingLeaveRequests")
+								.get("/index.php/dashboard/pendingLeaveRequests")
+								.check(status.is(200)),
+								http("employeeDistribution")
+									.get("/index.php/dashboard/employeeDistribution")
+									.check(status.is(200))
+							))
+						.pause(Utils.thinktime())
+						.exec(http("viewOrganizationGeneralInformation")
+							.get("/index.php/admin/viewOrganizationGeneralInformation")
+							.check(status.is(200))
+							.check(regex("General Information").exists)
+						)
+						.pause(Utils.thinktime())
+						.exec(http("viewLocations")
+							.get("/index.php/admin/viewLocations")
+							.check(status.is(200))
+							.check(regex("Locations").exists)
+						)
+						.pause(Utils.thinktime())
+						.exec(http("viewCompanyStructure")
+							.get("/index.php/admin/viewCompanyStructure")
+							.check(status.is(200))
+							.check(regex("Organization Structure").exists)
+						)
+						.pause(Utils.thinktime())
+						.exec(http("localization")
+							.get("/index.php/admin/localization")
+							.check(status.is(200))
+							.check(regex("Localization").exists)
+						)
+						.pause(Utils.thinktime())
+						.exec(http("listMailConfiguration")
+							.get("/index.php/admin/listMailConfiguration")
+							.check(status.is(200))
+							.check(regex("Mail Configuration").exists)
+						)
+						.pause(Utils.thinktime())
+						.exec(http("viewSystemUsers")
+							.get("/index.php/admin/viewSystemUsers")
+							.check(status.is(200))
+							.check(regex("System Users").exists)
+						)
+						.pause(Utils.thinktime())
+						.exec(http("viewJobTitleList")
+							.get("/index.php/admin/viewJobTitleList")
+							.check(status.is(200))
+							.check(regex("Job Titles").exists)
+						)
+						.pause(Utils.thinktime())
+						.exec(http("viewPayGrades")
+							.get("/index.php/admin/viewPayGrades")
+							.check(status.is(200))
+							.check(regex("Pay Grades").exists)
+						)
+						.pause(Utils.thinktime())
+						.exec(http("employmentStatus")
+							.get("/index.php/admin/employmentStatus")
+							.check(status.is(200))
+							.check(regex("").exists)
+						)
+						.pause(Utils.thinktime())
+						.exec(http("jobCategory")
+							.get("/index.php/admin/jobCategory")
+							.check(status.is(200))
+							.check(regex("Employment Status").exists)
+						)
+						.pause(Utils.thinktime())
+						.exec(http("workShift")
+							.get("/index.php/admin/workShift")
+							.check(status.is(200))
+							.check(regex("Work Shifts").exists)
+						)
+						.pause(Utils.thinktime())
+				}
+			}
 		}
 		def logout = {
 			// LOGOUT
@@ -521,8 +546,7 @@ class AddEmployee extends Simulation {
 
 		}
 		def loginLogout = {
-			exec (Employee.home)
-			.exec (Employee.login)
+			exec (Employee.login)
 				.exec (Employee.logout)
 		}
 		def addEmployee = {
@@ -584,9 +608,10 @@ class AddEmployee extends Simulation {
 		.during (TEST_DURATION.minutes) {
 			pace (PACING seconds)
 			randomSwitch(
-				50d->(Parcours.navigate),
-				30d->(Parcours.addEmployee),
-				20d->(Parcours.updatePhoto),
+				0d->(Parcours.navigate),
+				100d->(Parcours.searchEmployee),
+				0d->(Parcours.addEmployee),
+				0d->(Parcours.updatePhoto),
 			)
 		}
 
