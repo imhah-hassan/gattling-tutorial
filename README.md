@@ -62,8 +62,10 @@ Change gatling.conf
 runDescription = "Gatling tutorial"
 ```
   
-Add employee Random EmployeeID  
-========================================  
+# Add employee
+## Generate random EmployeeID  
+
+```
 import scala.util.Random  
 object Utils {  
 // Génération d’un matricule sur 5 chiffres  
@@ -73,88 +75,115 @@ def randomCode( ) : String = {
 }  
 }  
 exec (session => session.set("employeeRandomNumber", Utils.randomCode()))  
+```
   
-  
+## Correlate empNumber
+
+```
 .check(status.is(200))  
 .check(css("#csrf_token", "value").saveAs("csrf_token"))  
 .check(css("#empNumber", "value").saveAs("empNumber"))  
-  
-ElFileBody  
-  
+```
+If correlation are une .dat query file, change to ElFileBody  
+
+# Employee details
+## Correlate empId
+```
 .check(css("#personal__csrf_token", "value").saveAs("personal_csrf_token"))  
 .check(css("#personal_txtEmpID", "value").saveAs("personal_txtEmpID"))  
+```
   
   
-Search employee  
-==========================  
+# Search employee  
+
+```
 .check(status.is(200))  
 .check(css("#empsearch__csrf_token", "value").saveAs("empsearch_csrf_token"))  
+```
   
-Démo Chropath  
-table#resultTable>tbody>tr:nth-of-type(1)>td:nth-of-type(1)>input  
-  
+## Get element from table
+
+CSS : table#resultTable>tbody>tr:nth-of-type(1)>td:nth-of-type(1)>input  
+ 
+```
 .check(status.is(200))  
 .check(css("table#resultTable>tbody>tr:nth-of-type(1)>td:nth-of-type(1)>input", "value").saveAs("id"))  
-  
-  
-  
 .check(css("#contact__csrf_token", "value").saveAs("contact__csrf_token"))  
+```
   
-${employeeRandomNumber}  
-  
-Debug  
+ 
+# Debug  
+## Log on console
+```
 .exec(session => {  
  println("**** personal_txtEmpID : ****" + session("personal_txtEmpID").as[String]) session  
 })  
+```
   
-Debug Fiddler  
+## Debug whith Fiddler  
+add proxy to http object
+```
 .proxy(Proxy("localhost", 8888))  
+```
+Start fiddler and all requests will be viewed in sessions  
   
-  
-Delete  
+# Delete  
+```
 .check(css("#defaultList__csrf_token", "value").saveAs("defaultList__csrf_token"))  
+```
   
-ThinkTime et reorg  
-===================  
+# ThinkTime et code organization  
+```
 // Think time entre 1 et 3 s  
 		def thinktime( ) : FiniteDuration = {  
 			val rnd = new Random()  
 			return (rnd.nextInt(100) + 300).milliseconds  
 		}  
   
-Remplacer  
+```
+Repalce  
+```
 .pause(0)  
+```
+with 
+```
 .pause(Utils.thinktime())  
+```
   
-Réorganisation  
-	object Employee {  
+Create a new object
+
+```
+object Employee {  
 		def login = {  
 		}  
 	}  
+```
+move requests in object methods and replace them wich call to methods
+```
+.exec (Employee.login)  
+```
   
-		.exec (Employee.login)  
-def search (name:String)  
   
-  
-feeder  
-=======  
-employees.csv  
+# feeder  
+Create file employees.csv   
+```
 nom;prenom;matricule;date_de_naissance  
 Petitjean;Christelle;45471;1983-03-13  
 Leduc;Sabine;64166;1998-07-07  
 Roger;Olivie;54324;1997-03-01  
 Charles;Susan;99939;1974-02-25  
 Joly;Aurore;44632;1962-10-23  
+```
   
-  
+```
 feed(employees)  
 .exec(session => {  
  println("**** Employee  : ****" + session("nom").as[String] + " " + session("prenom").as[String] + " / " + session("matricule").as[String])  
 	 session  
 })  
-  
-  
-  
+``` 
+# Python code to generate data with Faker  
+```  
 from faker import Faker  
 from faker import Factory  
 fakerFR = Factory.create('fr_FR')  
@@ -166,15 +195,21 @@ prenom = fakerFR.first_name()
 matricule = str(fakerFR.random_number(5))  
 date_de_naissance = str(fakerFR.date_of_birth(tzinfo=None, minimum_age=22, maximum_age=60))  
 print( ";".join((nom, prenom, matricule, date_de_naissance)))  
-  
-parcours et modèle  
-====================  
+```
+
+# Use cases and load model
+
+Use case
+```
 object Parcours {  
   def LoginLogout = {  
      exec (Employee.Login)  
   }  
+```
   
-	val scn = scenario("OrangerHRM employee")  
+## Load model
+```
+val scn = scenario("OrangerHRM employee")  
 		.during (2.minutes) {  
 			pace (10.seconds)  
 			randomSwitch(  
@@ -186,21 +221,22 @@ object Parcours {
 	setUp(scn.inject(  
 		rampUsers (5) during (5.minutes)  
 	)).protocols(httpProtocol)  
+```
   
-Monitoring  
-===========  
-gatling.conf  
+# Monitoring  
+Change gatling.conf  
+```
 writers = [console, file, graphite]  
 graphite {  
   host = "localhost"             # InfluxDB or Carbon server  
   port = 2003                       # The port to which the Carbon server listens to (2003 is default for plaintext, 2004 is default for pickle)  
 }  
+```
   
-/etc/influxdb/influxdb.conf  
-  
+change /etc/influxdb/influxdb.conf  
+```
 [meta]  
 dir = "/var/lib/influxdb/meta"  
-  
 [data]  
 dir = "/var/lib/influxdb/data"  
 wal-dir = "/var/lib/influxdb/wal"  
@@ -239,5 +275,4 @@ templates = [
 	"v2.gatling.*.*.*.*.*.*.*   .measurement.run.host.simulation.group1.request.status.field   group=1",  
 	"v2.gatling.*.*.*.*.*.*   .measurement.run.host.simulation.request.status.field   group=0",  
 ]  
-  
-  
+```
