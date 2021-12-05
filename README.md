@@ -15,21 +15,21 @@ Record script on https://opensource-demo.orangehrmlive.com
 - Logout
 
 # First Correlation
-LoginLogout
-============
-Comment all request except Login and Logout
-Rename requests
+## LoginLogout
+Comment all request except Login and Logout  
+Rename requests  
 
-Correlate
-===========
+## Correlate
 Use firefox F12 and search token
 
+```
 /orangehrm/symfony/web/index.php/auth/login
 .check(status.is(200))
 .check( css("#csrf_token","value").saveAs("csrf_token"))
+```
 
 Add .check(status.is(200)) to all requests
-Set pause to 0
+Set all pause to 0
 
 Log and conf
 =====================
