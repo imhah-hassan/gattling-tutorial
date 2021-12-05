@@ -7,12 +7,12 @@ mvn archetype:generate -DarchetypeGroupId=io.gatling.highcharts -DarchetypeArtif
 # Record
 Run recorder  
 Record script on https://opensource-demo.orangehrmlive.com  
--Login
--Add Employee
--Employee Details
--Search Employee
--Delete Employee
--Logout
+- Login
+- Add Employee
+- Employee Details
+- Search Employee
+- Delete Employee
+- Logout
 
 # First Correlation
 LoginLogout
