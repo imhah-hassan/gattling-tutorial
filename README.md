@@ -5,14 +5,14 @@ Helpfull training at : https://academy.gatling.io/
 mvn archetype:generate -DarchetypeGroupId=io.gatling.highcharts -DarchetypeArtifactId=gatling-highcharts-maven-archetype -DgroupId=tutorial.gatling -DartifactId=OrangeHRM
 
 # Record
-Run recorder
-Record script on https://opensource-demo.orangehrmlive.com
-	1-Login
-	2-Add Employee
-	3-Employee Details
-	4-Search Employee
-	5-Delete Employee
-	6-Logout
+Run recorder  
+Record script on https://opensource-demo.orangehrmlive.com  
+-Login
+-Add Employee
+-Employee Details
+-Search Employee
+-Delete Employee
+-Logout
 
 # First Correlation
 LoginLogout
