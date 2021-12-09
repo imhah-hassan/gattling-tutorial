@@ -11,15 +11,15 @@ import io.gatling.jdbc.Predef._
 class AddEmployee extends Simulation {
 	val conf = ConfigFactory.load()
 	val server = conf.getString("server")
-	val base_url = "http://" + server +":90"
+	val base_url = "http://" + server + "/orangehrm/symfony/web"
 	val admin_pwd = conf.getString("admin_pwd")
 	val mysql_pwd = conf.getString("mysql_pwd")
 	//
 	// Ajouter le connecteur Mysql JDBC (mysql-connector-java-8.0.27.jar) dans les librairies du projet
 	// Click droit Projet --> Open Module Settings --> Librairies --> Add
 	//
-	val existing_employees = jdbcFeeder("jdbc:mysql://"+server+":3306/orangehrm_db?useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC", "root", mysql_pwd,
-			"SELECT emp_number as empId, employee_id as matricule, emp_lastname as nom , emp_firstname as first_name FROM hs_hr_employee WHERE emp_number != 1 order by emp_number;").random
+	//val existing_employees = jdbcFeeder("jdbc:mysql://"+server+":3306/orangehrm_db?useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC", "root", mysql_pwd,
+	//		"SELECT emp_number as empId, employee_id as matricule, emp_lastname as nom , emp_firstname as first_name FROM hs_hr_employee WHERE emp_number != 1 order by emp_number;").random
 
 	val PACING:Int = getProperty("PACING", "10").toInt										// seconds
 	val MIN_THK:Int = getProperty("MIN_THK", "1000").toInt								// miliseconds
@@ -608,8 +608,8 @@ class AddEmployee extends Simulation {
 		.during (TEST_DURATION.minutes) {
 			pace (PACING seconds)
 			randomSwitch(
-				0d->(Parcours.navigate),
-				100d->(Parcours.searchEmployee),
+				100d->(Parcours.navigate),
+				0d->(Parcours.searchEmployee),
 				0d->(Parcours.addEmployee),
 				0d->(Parcours.updatePhoto),
 			)

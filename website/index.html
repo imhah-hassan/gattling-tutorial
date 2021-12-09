@@ -1,0 +1,170 @@
+
+<html>
+<head>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
+<style>
+h1 {
+	font-family: 'Ubuntu', sans-serif;
+    font-size: 36px;
+    color: #515151;
+    font-weight: normal;
+    margin-right: 32px;
+}
+
+table{
+  border-spacing: 10;
+}
+
+th, td{
+  border: 10px solid grey;
+  padding: 10px;
+}
+</style>
+
+<script>
+function loadGraphics(){
+    document.getElementById("loadImage1").src = "photos/"+Math.floor(Math.random() * 28 + 1)+".jpg";
+    document.getElementById("loadImage2").src = "photos/"+Math.floor(Math.random() * 28 + 1)+".jpg";
+    document.getElementById("loadImage3").src = "photos/"+Math.floor(Math.random() * 28 + 1)+".jpg";
+    document.getElementById("loadImage4").src = "photos/"+Math.floor(Math.random() * 28 + 1)+".jpg";
+}
+window.onload = function(){
+    loadGraphics();
+};
+</script>
+</head>
+<body>
+
+<h1>Random photo loader</h1>
+<p/>
+
+<table>
+<tbody>
+<tr>
+<td>
+<div id="loadImage-wrap1" >
+    <img id="loadImage1" width="300" />
+</div>
+</td>
+<td>
+<div id="loadImage-wrap2" >
+    <img id="loadImage2" width="300" />
+</div>
+</td>
+</tr>
+<tr>
+<td>
+<div id="loadImage-wrap3" >
+    <img id="loadImage3" width="300" />
+</div>
+</td>
+<td>
+<div id="loadImage-wrap4" >
+    <img id="loadImage4" width="300" />
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+
+<!--
+<table>
+<tbody>
+<tr>
+	<td>Photo 1</td><td></td>
+	<td><img class="fit-picture" width="200" height="200"
+		 src="photos/1.jpg"
+		 alt="Random photo"></td>
+</tr>
+<tr>
+	<td>Photo 2</td><td></td>
+	<td><img class="fit-picture" width="200" height="200"
+		 src="photos/2.jpg"
+		 alt="Random photo"></td>
+</tr>
+<tr>
+	<td>Photo 3</td><td></td>
+	<td><img class="fit-picture" width="200" height="200"
+		 src="photos/3.jpg"
+		 alt="Random photo"></td>
+</tr>
+<tr>
+	<td>Photo 4</td><td></td>
+	<td><img class="fit-picture" width="200" height="200"
+		 src="photos/4.jpg"
+		 alt="Random photo"></td>
+</tr>
+<tr>
+	<td>Photo 5</td><td></td>
+	<td><img class="fit-picture" width="200" height="200"
+		 src="photos/5.jpg"
+		 alt="Random photo"></td>
+</tr>
+<tr>
+	<td>Photo 6</td><td></td>
+	<td><img class="fit-picture" width="200" height="200"
+		 src="photos/6.jpg"
+		 alt="Random photo"></td>
+</tr>
+<tr>
+	<td>Photo 7</td><td></td>
+	<td><img class="fit-picture" width="200" height="200"
+		 src="photos/7.jpg"
+		 alt="Random photo"></td>
+</tr>
+<tr>
+	<td>Photo 8</td><td></td>
+	<td><img class="fit-picture" width="200" height="200"
+		 src="photos/8.jpg"
+		 alt="Random photo"></td>
+</tr>
+<tr>
+	<td>Photo 9</td><td></td>
+	<td><img class="fit-picture" width="200" height="200"
+		 src="photos/9.jpg"
+		 alt="Random photo"></td>
+</tr>
+<tr>
+	<td>Photo 10</td><td></td>
+	<td><img class="fit-picture" width="200" height="200"
+		 src="photos/10.jpg"
+		 alt="Random photo"></td>
+</tr>
+<tr>
+	<td>Photo 11</td><td></td>
+	<td><img class="fit-picture" width="200" height="200"
+		 src="photos/11.jpg"
+		 alt="Random photo"></td>
+</tr>
+<tr>
+	<td>Photo 12</td><td></td>
+	<td><img class="fit-picture" width="200" height="200"
+		 src="photos/12.jpg"
+		 alt="Random photo"></td>
+</tr>
+<tr>
+	<td>Photo 13</td><td></td>
+	<td><img class="fit-picture" width="200" height="200"
+		 src="photos/13.jpg"
+		 alt="Random photo"></td>
+</tr>
+<tr>
+	<td>Photo 14</td><td></td>
+	<td><img class="fit-picture" width="200" height="200"
+		 src="photos/15.jpg"
+		 alt="Random photo"></td>
+</tr>
+<tr>
+	<td>Photo 15</td><td></td>
+	<td><img class="fit-picture" width="200" height="200"
+		 src="photos/15.jpg"
+		 alt="Random photo"></td>
+</tr>
+</tbody>
+</table>
+-->
+
+</body>
+</html>
