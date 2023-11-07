@@ -1,0 +1,12 @@
+{"lastName":"#{lastName}",
+  "firstName":"#{firstName}",
+  "middleName":"",
+  "employeeId":"#{employeeId}",
+  "otherId":"",
+  "drivingLicenseNo":"",
+  "drivingLicenseExpiredDate":null,
+  "gender":"1",
+  "maritalStatus":"Married",
+  "birthday":"#{birthday}",
+  "nationalityId":64
+}

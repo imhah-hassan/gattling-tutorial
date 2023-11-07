@@ -1,0 +1,6 @@
+{ "empPicture": {
+      "name":"#{file}",
+      "type":"image/png",
+      "size": "#{size}",
+      "base64":"#{base64}"
+}}
